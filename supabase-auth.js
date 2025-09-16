@@ -1,6 +1,8 @@
 // === Настройка Supabase ===
 const SUPABASE_URL = "https://egskxyxgzdidfbxhjaud.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw";
+
+// Создаём клиент Supabase (V2 через CDN)
 const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // === Вход через Discord ===
@@ -21,9 +23,12 @@ async function signInWithDiscord() {
 
 // === Выход ===
 async function signOutSupabase() {
-  const { error } = await supabase.auth.signOut();
-  if (error) {
-    console.error("Ошибка выхода:", error.message);
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    updateUserUI();
+  } catch (err) {
+    console.error("Ошибка выхода:", err);
     alert("Не удалось выйти из аккаунта.");
   }
 }
@@ -34,7 +39,6 @@ async function updateUserUI() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (user) {
-    // Имя и аватар
     const name = user.user_metadata?.full_name || user.user_metadata?.global_name || "User";
     const avatarUrl = user.user_metadata?.avatar_url || null;
 
@@ -47,49 +51,46 @@ async function updateUserUI() {
       </div>
     `;
   } else {
-    // Если гость
     userSection.innerHTML = `<button class="login-btn">Войти</button>`;
   }
 }
 
-// === Проверка сессии после редиректа ===
+// === Проверка сессии при загрузке страницы ===
 async function checkSession() {
   const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user) {
-    updateUserUI();
-  }
+  if (session?.user) updateUserUI();
 }
 
-// === Модальное окно и кнопки ===
+// === DOMContentLoaded: обработка модалок и кнопок ===
 document.addEventListener("DOMContentLoaded", () => {
   checkSession();
-
-  // Открыть модалку авторизации
-  document.getElementById('userSection')?.addEventListener('click', (e) => {
-    if (e.target.closest('.login-btn')) {
-      document.getElementById('authPage').style.display = 'flex';
-    }
-    if (e.target.closest('.user-avatar')) {
-      if (confirm('Выйти из аккаунта?')) signOutSupabase().then(updateUserUI);
-    }
-  });
-
-  // Закрытие модалки
-  document.querySelector('.close-auth')?.addEventListener('click', () => {
-    document.getElementById('authPage').style.display = 'none';
-  });
-  document.getElementById('authPage')?.addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
-  });
 
   // Кнопка Discord в модалке
   document.getElementById('discordSignIn')?.addEventListener('click', (e) => {
     e.preventDefault();
     signInWithDiscord();
   });
+
+  // Кнопка входа/аватар в хедере
+  document.getElementById('userSection')?.addEventListener('click', (e) => {
+    if (e.target.closest('.login-btn')) {
+      document.getElementById('authPage').style.display = 'flex';
+    }
+    if (e.target.closest('.user-avatar')) {
+      if (confirm('Выйти из аккаунта?')) signOutSupabase();
+    }
+  });
+
+  // Закрытие модалки авторизации
+  document.querySelector('.close-auth')?.addEventListener('click', () => {
+    document.getElementById('authPage').style.display = 'none';
+  });
+  document.getElementById('authPage')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+  });
 });
 
-// === Следим за изменением статуса авторизации ===
+// === Следим за изменением статуса авторизации в реальном времени ===
 supabase.auth.onAuthStateChange(() => {
   updateUserUI();
 });
