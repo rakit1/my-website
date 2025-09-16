@@ -6,7 +6,7 @@
 
   // Задайте ваши значения (анон‑ключ можно оставить пустым для защитного режима)
   const SUPABASE_URL = 'https://egskxyxgzdidfbxhjaud.supabase.co'; // <-- ваш проект
-  const SUPABASE_ANON_KEY = ''; // <-- вставьте anon key здесь (без <>). Если пусто — auth будет отключён.
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw'; // <-- вставьте anon key здесь (без <>). Если пусто — auth будет отключён.
 
   // Локальная переменная клиента
   let sb = null;
