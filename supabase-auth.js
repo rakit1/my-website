@@ -1,52 +1,40 @@
-// supabase-auth.js
-// Интеграция входа через Discord + минимальная совместимость с остальным кодом страницы.
-//
-// ВАЖНО: замените значения SUPABASE_URL и SUPABASE_ANON_KEY на свои из Supabase Project -> API
-// Также убедитесь, что в Supabase включён Discord provider (Client ID/Secret вставлены)
-// и в Discord Developer Portal в Redirects добавлен:
-//   https://<YOUR_SUPABASE_PROJECT>.supabase.co/auth/v1/callback
-
-const SUPABASE_URL = 'https://egskxyxgzdidfbxhjaud.supabase.co'; // <-- замените
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw'; // <-- замените
+// supabase-auth.js — обновлённый: надёжно навешивает обработчики и использует делегирование
+// ВАЖНО: заполните SUPABASE_URL и SUPABASE_ANON_KEY корректными значениями
+const SUPABASE_URL = 'https://egskxyxgzdidfbxhjaud.supabase.co'; // <-- ваш проект
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw'; // <-- ваш anon key (без <>)
 
 if (!window.supabase) {
-  console.warn('Supabase SDK not found - make sure the CDN script is loaded before this file.');
+  console.warn('Supabase SDK not found - убедитесь, что CDN загружен до этого файла.');
 }
 
-// создаём клиент Supabase
 const sb = (window.supabase && supabase.createClient)
   ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
-// Экспортируемные имена (используются в остальной логике страницы)
 window.signOutSupabase = signOutSupabase;
 window.checkAuthAndShowIp = checkAuthAndShowIp;
-window.signInWithNick = signInWithNick; // stub: старый путь отключён
-window.signUpWithNick = signUpWithNick; // stub: старый путь отключён
+window.signInWithNick = signInWithNick;
+window.signUpWithNick = signUpWithNick;
 window.updateUserSectionFromSession = updateUserSectionFromSession;
 
 if (!sb) {
-  console.error('Supabase client not initialized. Fill SUPABASE_URL and SUPABASE_ANON_KEY correctly.');
+  console.error('Supabase client not initialized. Проверьте SUPABASE_URL и SUPABASE_ANON_KEY.');
 } else {
   initAuth();
 }
 
+// Инициализация auth. Не полагаемся только на элемент существующий в момент загрузки файла.
 async function initAuth() {
-  // Если пользователь вернулся с OAuth редиректа, сохраните сессию
   try {
-    // Если в URL нет параметров — метод может бросить. Игнорируем.
     await sb.auth.getSessionFromUrl({ storeSession: true });
   } catch (err) {
-    // Обычно "No auth params found" — нормально
-    // console.debug('getSessionFromUrl:', err?.message || err);
+    // нормально, если нет параметров
   }
 
-  // Подписка на смену сессии
   sb.auth.onAuthStateChange((_event, session) => {
     updateUserSectionFromSession(session);
   });
 
-  // Получим текущую сессию и обновим UI
   try {
     const { data } = await sb.auth.getSession();
     updateUserSectionFromSession(data.session);
@@ -54,66 +42,76 @@ async function initAuth() {
     console.error('Ошибка получения сессии Supabase:', err);
   }
 
-  // Привязываем кнопку входа в модальном окне (если есть)
-  const modalBtn = document.getElementById('discordSignIn');
-  if (modalBtn) {
-    modalBtn.addEventListener('click', (e) => {
+  // Надёжно навешиваем обработчик на кнопку входа:
+  // 1) Если кнопка уже есть в DOM — повесим прямо.
+  // 2) Также добавляем делегирование кликов на документ — чтобы ловить клики, даже если кнопка добавится поздно.
+  attachModalButton();
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest && e.target.closest('#discordSignIn');
+    if (btn) {
       e.preventDefault();
       signInWithDiscord();
-    });
+    }
+  });
+}
+
+// Функция, которая попытается найти кнопку и навесить слушатель (вызовется сразу и после DOMContentLoaded)
+function attachModalButton() {
+  const tryAttach = () => {
+    const modalBtn = document.getElementById('discordSignIn');
+    if (modalBtn && !modalBtn._supabaseAttached) {
+      modalBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        signInWithDiscord();
+      });
+      modalBtn._supabaseAttached = true;
+    }
+  };
+  tryAttach();
+  // На случай, если скрипт загрузился до DOM — привяжем повторно после DOMContentLoaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryAttach);
   }
 }
 
-// Запуск OAuth через Supabase (редирект на Discord)
 async function signInWithDiscord() {
+  if (!sb) return alert('Авторизация недоступна (ошибка конфигурации).');
   try {
     await sb.auth.signInWithOAuth({
       provider: 'discord',
-      options: {
-        scopes: 'identify email'
-      }
+      options: { scopes: 'identify email' }
     });
-    // После этого произойдёт редирект — дальнейшая обработка в getSessionFromUrl / onAuthStateChange
+    // редирект произойдёт автоматически
   } catch (err) {
     console.error('Ошибка при попытке входа через Discord:', err);
     alert(err?.message || 'Не удалось начать вход через Discord.');
   }
 }
 
-// Выход
 async function signOutSupabase() {
+  if (!sb) return;
   try {
     await sb.auth.signOut();
-    // Обновим UI
     updateUserSectionFromSession(null);
-    // Опционально обновляем страницу:
-    // window.location.reload();
   } catch (err) {
     console.error('Ошибка выхода:', err);
     alert('Не удалось выйти.');
   }
 }
 
-// Для совместимости: отключаем старую регистрацию/логин парой ник+пароль.
-// Эти функции существуют, но говорят пользователю, что нужно входить через Discord.
 function signInWithNick(nick, pwd) {
-  return Promise.reject(new Error('Вход по нику/паролю отключён. Пожалуйста, используйте вход через Discord.'));
+  return Promise.reject(new Error('Вход по нику/паролю отключён. Используйте Discord.'));
 }
 function signUpWithNick(nick, pwd) {
-  return Promise.reject(new Error('Регистрация по нику/паролю отключена. Пожалуйста, используйте вход через Discord.'));
+  return Promise.reject(new Error('Регистрация по нику/паролю отключена. Используйте Discord.'));
 }
 
-// Обновляет #userSection: принимает сессию (или null) — используется page кодом
 function updateUserSectionFromSession(session) {
   const sec = document.getElementById('userSection');
   if (!sec) return;
   if (session && session.user) {
-    // Берём метаданные пользователя, пытаемся получить имя
     const meta = session.user.user_metadata || {};
-    // Возможные поля: username, user_name, full_name, etc.
     const name = meta.username || meta.user_name || meta.full_name || session.user.email || 'Игрок';
-    // Аватар: Discord может вернуть аватар в user_metadata (если настроено), но чаще нет.
-    // Покажем инициал пользователя
     const initials = (name && name[0]) ? name[0].toUpperCase() : 'U';
     sec.innerHTML = `
       <div class="user-info" title="${escapeHtml(name)}">
@@ -121,30 +119,23 @@ function updateUserSectionFromSession(session) {
         <div style="margin-left:8px; font-weight:700; color:var(--text)">${escapeHtml(truncate(name, 18))}</div>
       </div>
     `;
-    // Навесим клик на аватар для выхода
     const avatar = document.getElementById('userAvatar');
-    if (avatar) {
-      avatar.addEventListener('click', () => {
-        if (confirm('Выйти из аккаунта?')) signOutSupabase();
-      });
-    }
-    // Закрываем модальное окно, если открыто
+    if (avatar) avatar.addEventListener('click', () => {
+      if (confirm('Выйти из аккаунта?')) signOutSupabase();
+    });
     hideAuthModalSafe();
   } else {
-    // Показываем кнопку входа (сохраняя оригинальный класс и стиль)
     sec.innerHTML = '<button class="login-btn">Войти</button>';
   }
 }
 
-// Проверка аутентификации при попытке получить IP: если залогинен — показываем ip modal, иначе показываем auth modal
 async function checkAuthAndShowIp() {
+  if (!sb) { showAuthModalSafe(); return; }
   try {
     const { data } = await sb.auth.getSession();
     if (data && data.session && data.session.user) {
-      // пользователь есть — показываем IP modal
       showIpModalSafe();
     } else {
-      // не залогинен — открываем модалку входа
       showAuthModalSafe();
     }
   } catch (err) {
@@ -153,7 +144,7 @@ async function checkAuthAndShowIp() {
   }
 }
 
-/* Helper UI helpers (взаимодействуют с DOM, определены в index.html, но на случай отсутствия доступны тут) */
+/* UI helpers (fallback) */
 function showAuthModalSafe() {
   const el = document.getElementById('authPage');
   if (el) el.style.display = 'flex';
@@ -167,7 +158,7 @@ function showIpModalSafe() {
   if (el) el.style.display = 'flex';
 }
 
-/* Утилиты */
+/* Utils */
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
