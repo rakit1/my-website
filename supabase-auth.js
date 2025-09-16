@@ -82,31 +82,32 @@ class AuthManager {
         if (modal) modal.style.display = 'none';
     }
 
-    async signInWithDiscord() {
-        try {
-            console.log('Начало авторизации через Discord...');
-            
-            const { data, error } = await this.supabase.auth.signInWithOAuth({
-                provider: 'discord',
-                options: { 
-                    redirectTo: window.location.origin,
-                    scopes: 'identify email'
-                }
-            });
-
-            if (error) {
-                console.error('Ошибка OAuth:', error);
-                alert('Ошибка при входе через Discord: ' + error.message);
-                return;
+async signInWithDiscord() {
+    try {
+        console.log('Начало авторизации через Discord...');
+        
+        // ИСПРАВЛЕННЫЙ КОД - правильный redirectTo
+        const { data, error } = await this.supabase.auth.signInWithOAuth({
+            provider: 'discord',
+            options: { 
+                redirectTo: 'https://rakit1.github.io/my-website/', // ПРАВИЛЬНЫЙ URL
+                scopes: 'identify email'
             }
+        });
 
-            console.log('OAuth данные:', data);
-
-        } catch (error) {
-            console.error('Ошибка авторизации:', error);
-            alert('Произошла ошибка при авторизации');
+        if (error) {
+            console.error('Ошибка OAuth:', error);
+            alert('Ошибка при входе через Discord: ' + error.message);
+            return;
         }
+
+        console.log('OAuth данные:', data);
+
+    } catch (error) {
+        console.error('Ошибка авторизации:', error);
+        alert('Произошла ошибка при авторизации');
     }
+}
 
     async signOut() {
         if (confirm('Выйти из аккаунта?')) {
