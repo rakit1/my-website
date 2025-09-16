@@ -96,6 +96,7 @@
     justify-content: center;
     font-weight: 600;
     color: white;
+    cursor: pointer;
   }
 
   .login-btn {
@@ -817,7 +818,7 @@
           </div>
           <p class="server-info">Сервер для совместного строительства и творчества. Создавайте amazing проекты вместе с другими игроками!</p>
           
-          <button class="server-join-btn">Присоединиться</button>
+          <button class="server-join-btn" type="button" aria-label="Присоединиться к CoBuilding">Присоединиться</button>
         </div>
       </div>
     </section>
@@ -828,20 +829,24 @@
   </footer>
 </main>
 
-<!-- Auth Modal -->
+<!-- Auth Modal (ник + пароль, тот же стиль) -->
 <div id="authPage" class="auth-container">
-  <button class="close-auth">&times;</button>
   <div class="auth-box">
-    <h2 class="auth-title">Вход на сайт</h2>
-    <input type="text" id="usernameInput" class="auth-input" placeholder="Введите ваш никнейм" maxlength="20">
-    <button id="loginBtn" class="auth-btn">Войти</button>
+    <button class="close-auth" aria-label="Закрыть">&times;</button>
+    <h2 class="auth-title">Вход / Регистрация</h2>
+    <input type="text" id="nicknameInput" class="auth-input" placeholder="Никнейм (например: ivan123)" maxlength="30" aria-label="Никнейм">
+    <input type="password" id="passwordInput" class="auth-input" placeholder="Пароль" aria-label="Пароль">
+    <div style="display:flex;gap:10px;">
+      <button id="loginBtn" class="auth-btn" type="button">Войти</button>
+      <button id="signupBtn" class="auth-btn" type="button" style="background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text);">Регистрация</button>
+    </div>
   </div>
 </div>
 
 <!-- IP Modal -->
 <div id="ipModal" class="ip-modal">
   <div class="ip-modal-content">
-    <button class="close-ip-modal">&times;</button>
+    <button class="close-ip-modal" aria-label="Закрыть">&times;</button>
     <h3 class="ip-modal-title">Выберите регион для подключения</h3>
     
     <div class="ip-buttons">
@@ -864,6 +869,10 @@
   </div>
 </div>
 
+<!-- Supabase и auth логика -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="supabase-auth.js"></script>
+
 <script>
   // Initialize when page loads
   document.addEventListener('DOMContentLoaded', function() {
@@ -871,66 +880,137 @@
   });
 
   function initApp() {
-    // Check if user is logged in
-    const currentUser = localStorage.getItem('currentUser');
-    updateUserSection(currentUser);
-    
-    // Setup event listeners
+    // Try to let supabase-auth.js populate user if available via its onAuthStateChange.
+    // Fallback to localStorage (legacy) if supabase not available or user prefers local.
+    if (window.sb) {
+      // supabase-auth.js will call updateUserSectionFromSession on load.
+    } else {
+      // Legacy fallback (localStorage username only)
+      const currentUser = localStorage.getItem('currentUser');
+      updateUserSection(currentUser);
+    }
     setupEventListeners();
   }
 
   function setupEventListeners() {
-    // Login button in header
-    document.getElementById('userSection').addEventListener('click', function(e) {
-      if (e.target.classList.contains('login-btn')) {
+    // Delegate clicks inside userSection: login or avatar actions
+    const userSection = document.getElementById('userSection');
+    userSection.addEventListener('click', function(e) {
+      const target = e.target;
+      if (target.classList.contains('login-btn')) {
         showAuthModal();
+      } else if (target.classList.contains('user-avatar')) {
+        // If supabase logout is available, use it; otherwise fallback to localStorage clear
+        if (typeof signOutSupabase === 'function') {
+          if (confirm('Выйти из аккаунта?')) signOutSupabase();
+        } else {
+          if (confirm('Выйти (локально)?')) {
+            localStorage.removeItem('currentUser');
+            updateUserSection(null);
+          }
+        }
       }
     });
-    
-    // Auth modal
-    document.getElementById('loginBtn').addEventListener('click', handleLogin);
+
+    // Auth modal buttons: prefer supabase methods if available, else fallback to local logic
+    document.getElementById('signupBtn').addEventListener('click', async function() {
+      const nick = document.getElementById('nicknameInput').value.trim();
+      const pwd = document.getElementById('passwordInput').value;
+      if (!nick || !pwd) return alert('Заполните ник и пароль');
+      if (typeof signUpWithNick === 'function') {
+        try {
+          await signUpWithNick(nick, pwd);
+          alert('Регистрация прошла. Войдите используя тот же ник и пароль.');
+          hideAuthModal();
+        } catch (err) {
+          // signUpWithNick показывает alert в случае ошибки
+        }
+      } else {
+        // Legacy: store only nick locally (no password handling)
+        localStorage.setItem('currentUser', nick);
+        updateUserSection(nick);
+        hideAuthModal();
+      }
+    });
+
+    document.getElementById('loginBtn').addEventListener('click', async function() {
+      const nick = document.getElementById('nicknameInput').value.trim();
+      const pwd = document.getElementById('passwordInput').value;
+      if (!nick || !pwd) return alert('Введите ник и пароль');
+      if (typeof signInWithNick === 'function') {
+        try {
+          await signInWithNick(nick, pwd);
+          hideAuthModal();
+        } catch (err) {
+          // signInWithNick показывает alert в случае ошибки
+        }
+      } else {
+        // Legacy login (no password check)
+        localStorage.setItem('currentUser', nick);
+        updateUserSection(nick);
+        hideAuthModal();
+      }
+    });
+
+    // Close auth modal
     document.querySelector('.close-auth').addEventListener('click', hideAuthModal);
     document.getElementById('authPage').addEventListener('click', function(e) {
       if (e.target === this) hideAuthModal();
     });
-    
-    // IP modal
-    document.querySelector('.server-join-btn').addEventListener('click', showIpModal);
-    document.querySelector('.close-ip-modal').addEventListener('click', hideIpModal);
+
+    // IP modal: attach to server join buttons — prefer supabase helper if present
+    document.querySelectorAll('.server-join-btn').forEach(btn => {
+      btn.addEventListener('click', async function(e) {
+        if (typeof checkAuthAndShowIp === 'function') {
+          await checkAuthAndShowIp();
+        } else {
+          // fallback: show auth modal
+          showAuthModal();
+        }
+      });
+    });
+
+    document.querySelector('.close-ip-modal')?.addEventListener('click', hideIpModal);
     document.getElementById('ipModal').addEventListener('click', function(e) {
       if (e.target === this) hideIpModal();
     });
-    
+
     // IP copy buttons
     document.querySelectorAll('.ip-btn').forEach(button => {
       button.addEventListener('click', function() {
         copyIP(this.getAttribute('data-ip'), this);
       });
+      button.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          copyIP(this.getAttribute('data-ip'), this);
+        }
+      });
     });
-    
-    // Enter key in auth form
-    document.getElementById('usernameInput').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') handleLogin();
+
+    // Enter in inputs triggers login
+    document.getElementById('passwordInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('loginBtn').click();
     });
-    
+
     // Mobile menu
     const menuBtn = document.querySelector('.mobile-menu-btn');
     const nav = document.querySelector('nav');
-    
+
     if (window.innerWidth <= 520) {
       menuBtn.style.display = 'flex';
     }
-    
+
     menuBtn.addEventListener('click', function() {
       nav.classList.toggle('active');
     });
-    
+
     document.querySelectorAll('nav a').forEach(link => {
       link.addEventListener('click', () => {
         nav.classList.remove('active');
       });
     });
-    
+
     window.addEventListener('resize', function() {
       menuBtn.style.display = window.innerWidth > 520 ? 'none' : 'flex';
       if (window.innerWidth > 520) nav.classList.remove('active');
@@ -943,37 +1023,35 @@
     });
   }
 
+  // Update UI (same safe approach)
   function updateUserSection(username) {
     const userSection = document.getElementById('userSection');
-    
+    userSection.innerHTML = '';
     if (username) {
-      userSection.innerHTML = `
-        <div class="user-info">
-          <div class="user-avatar">${username.charAt(0).toUpperCase()}</div>
-          <span>${username}</span>
-        </div>
-      `;
+      const container = document.createElement('div');
+      container.className = 'user-info';
+      const avatar = document.createElement('div');
+      avatar.className = 'user-avatar';
+      avatar.textContent = username.charAt(0).toUpperCase();
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = username;
+      container.appendChild(avatar);
+      container.appendChild(nameSpan);
+      userSection.appendChild(container);
     } else {
-      userSection.innerHTML = `<button class="login-btn">Войти</button>`;
-    }
-  }
-
-  function handleLogin() {
-    const username = document.getElementById('usernameInput').value.trim();
-    
-    if (username) {
-      localStorage.setItem('currentUser', username);
-      updateUserSection(username);
-      hideAuthModal();
-    } else {
-      alert('Пожалуйста, введите ваш никнейм');
+      const btn = document.createElement('button');
+      btn.className = 'login-btn';
+      btn.type = 'button';
+      btn.textContent = 'Войти';
+      userSection.appendChild(btn);
     }
   }
 
   function showAuthModal() {
     document.getElementById('authPage').style.display = 'flex';
-    document.getElementById('usernameInput').value = '';
-    document.getElementById('usernameInput').focus();
+    document.getElementById('nicknameInput').value = '';
+    document.getElementById('passwordInput').value = '';
+    document.getElementById('nicknameInput').focus();
   }
 
   function hideAuthModal() {
@@ -988,29 +1066,26 @@
     document.getElementById('ipModal').style.display = 'none';
   }
 
-  function copyIP(ip, element) {
+  // copyIP as before (same behaviour)
+  async function copyIP(ip, element) {
     if (element.classList.contains('copied')) return;
-    
     try {
-      navigator.clipboard.writeText(ip).then(() => {
-        element.classList.add('copied');
-        setTimeout(() => element.classList.remove('copied'), 1600);
-      }).catch(() => {
-        // Fallback for older browsers
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(ip);
+      } else {
         const textArea = document.createElement('textarea');
         textArea.value = ip;
         textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
         document.body.appendChild(textArea);
         textArea.select();
         document.execCommand('copy');
         document.body.removeChild(textArea);
-        
-        element.classList.add('copied');
-        setTimeout(() => element.classList.remove('copied'), 1600);
-      });
-    } catch (err) {
+      }
       element.classList.add('copied');
       setTimeout(() => element.classList.remove('copied'), 1600);
+    } catch (err) {
+      try { window.prompt('Скопируйте IP вручную:', ip); } catch (_) {}
     }
   }
 </script>
