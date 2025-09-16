@@ -26,7 +26,6 @@
     scroll-behavior: smooth;
   }
 
-  /* (весь твой оригинальный CSS — без изменений) */
   /* Header */
   header {
     width: 100%;
@@ -376,7 +375,7 @@
     box-shadow: 0 8px 22px rgba(99, 91, 255, 0.15);
   }
 
-  /* Auth modal (now only Discord button inside) */
+  /* Auth modal */
   .auth-container {
     display: none;
     justify-content: center;
@@ -709,7 +708,6 @@
   </nav>
 
   <div id="userSection">
-    <!-- будет заменён скриптом на аватар/имя или кнопку входа -->
     <button class="login-btn">Войти</button>
   </div>
 
@@ -735,7 +733,6 @@
         <div class="hero-actions">
           <button class="btn btn-primary" onclick="scrollToServers()">Наши сервера</button>
           <a href="https://discord.com" class="btn btn-discord" target="_blank" rel="noopener noreferrer" aria-label="Discord">
-            <!-- восстановленный корректный SVG значок Discord -->
             <svg class="discord-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" width="20" height="20">
               <path d="M20.317 4.3698a19.791 19.791 0 00-4.885-1.5153.07.07 0 00-.075.035c-.21.375-.444.864-.608 1.249-1.844-.276-3.68-.276-5.486 0-.164-.393-.405-.874-.617-1.249a.073.073 0 00-.075-.035 19.736 19.736 0 00-4.885 1.515.064.064 0 00-.03.027C2.53 9.045 1.67 13.533 2.165 17.946a.082.082 0 00.031.056c2.03 1.49 3.99 2.4 5.916 3.024a.078.078 0 00.084-.027c.456-.63.861-1.296 1.195-1.994a.061.061 0 00-.035-.086c-.637-.24-1.254-.524-1.853-.835a.064.064 0 01-.01-.104c.124-.093.248-.187.371-.279a.061.061 0 01.061-.01c3.903 1.78 8.135 1.78 12.003 0a.061.061 0 01.063.009c.124.092.248.185.372.278a.063.063 0 01-.01.104 12.298 12.298 0 01-1.853.835.06.06 0 00-.035.086c.334.698.739 1.364 1.195 1.994a.078.078 0 00.084.027c1.927-.624 3.887-1.534 5.916-3.024a.083.083 0 00.031-.056c.5-4.414-.36-8.903-2.708-13.55a.061.061 0 00-.03-.027zM8.02 15.331c-.62 0-1.12-.57-1.12-1.273 0-.703.5-1.273 1.12-1.273.62 0 1.12.57 1.12 1.273 0 .703-.5 1.273-1.12 1.273zm7.97 0c-.62 0-1.12-.57-1.12-1.273 0-.703.5-1.273 1.12-1.273.62 0 1.12.57 1.12 1.273 0 .703-.5 1.273-1.12 1.273z"/>
             </svg>
@@ -776,7 +773,7 @@
     </section>
     
     <section class="servers" id="servers-section">
-      <h2 class="section-title">Наши сервера</h2>
+      <h2 class="section-title">Наши серверы</h2>
       
       <div class="server-cards">
         <div class="server-card">
@@ -797,7 +794,7 @@
   </footer>
 </main>
 
-<!-- Auth Modal (упрощённый: только вход через Discord, дизайн сохранён) -->
+<!-- Auth Modal -->
 <div id="authPage" class="auth-container">
   <div class="auth-box">
     <button class="close-auth" aria-label="Закрыть">&times;</button>
@@ -808,7 +805,6 @@
     </p>
 
     <button id="discordSignIn" class="btn-discord" aria-label="Войти через Discord" style="margin:0 auto;">
-      <!-- восстановленный значок внутри модалки -->
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <path d="M20.317 4.3698a19.791 19.791 0 00-4.885-1.5153.07.07 0 00-.075.035c-.21.375-.444.864-.608 1.249-1.844-.276-3.68-.276-5.486 0-.164-.393-.405-.874-.617-1.249a.073.073 0 00-.075-.035 19.736 19.736 0 00-4.885 1.515.064.064 0 00-.03.027C2.53 9.045 1.67 13.533 2.165 17.946a.082.082 0 00.031.056c2.03 1.49 3.99 2.4 5.916 3.024a.078.078 0 00.084-.027c.456-.63.861-1.296 1.195-1.994a.061.061 0 00-.035-.086c-.637-.24-1.254-.524-1.853-.835a.064.064 0 01-.01-.104c.124-.093.248-.187.371-.279a.061.061 0 01.061-.01c3.903 1.78 8.135 1.78 12.003 0a.061.061 0 01.063.009c.124.092.248.185.372.278a.063.063 0 01-.01.104 12.298 12.298 0 01-1.853.835.06.06 0 00-.035.086c.334.698.739 1.364 1.195 1.994a.078.078 0 00.084.027c1.927-.624 3.887-1.534 5.916-3.024a.083.083 0 00.031-.056c.5-4.414-.36-8.903-2.708-13.55a.061.061 0 00-.03-.027zM8.02 15.331c-.62 0-1.12-.57-1.12-1.273 0-.703.5-1.273 1.12-1.273.62 0 1.12.57 1.12 1.273 0 .703-.5 1.273-1.12 1.273zm7.97 0c-.62 0-1.12-.57-1.12-1.273 0-.703.5-1.273 1.12-1.273.62 0 1.12.57 1.12 1.273 0 .703-.5 1.273-1.12 1.273z"/>
       </svg>
@@ -843,94 +839,114 @@
   </div>
 </div>
 
-<!-- Supabase (v2) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
-<!-- Our auth integration -->
+<!-- Сначала загружаем Supabase SDK -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<!-- Затем наш auth скрипт -->
 <script src="supabase-auth.js"></script>
 
 <script>
-  // Добавил отсутствующую функцию scrollToServers
+  // Функция прокрутки к серверам
   function scrollToServers() {
     const el = document.getElementById('servers-section');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  // Защитная привязка обработчиков — привязываем поведение кнопки в DOMContentLoaded
+  // Основные обработчики событий
   document.addEventListener('DOMContentLoaded', () => {
-    // Закрытие модалей
-    document.querySelector('.close-auth')?.addEventListener('click', () => {
-      document.getElementById('authPage').style.display = 'none';
-    });
-    document.getElementById('authPage')?.addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
-    });
-
-    // Надёжный обработчик для кнопки в модалке: вызывает signInWithDiscord() если доступна
-    const discordBtn = document.getElementById('discordSignIn');
-    function onDiscordSignInClick(e) {
-      e.preventDefault();
-      if (typeof signInWithDiscord === 'function') {
-        try {
-          signInWithDiscord();
-        } catch (err) {
-          console.error('signInWithDiscord error:', err);
-          alert('Ошибка при попытке входа. Посмотрите консоль.');
-        }
-      } else {
-        // Если функция не определена — покажем понятное сообщение
-        alert('Авторизация временно недоступна. Проверьте конфигурацию Supabase.');
-      }
+    // Закрытие auth модала
+    const closeAuthBtn = document.querySelector('.close-auth');
+    const authModal = document.getElementById('authPage');
+    
+    if (closeAuthBtn) {
+      closeAuthBtn.addEventListener('click', () => {
+        authModal.style.display = 'none';
+      });
     }
-    if (discordBtn) {
-      discordBtn.removeEventListener('click', onDiscordSignInClick); // безопасно удалить старые
-      discordBtn.addEventListener('click', onDiscordSignInClick);
+    
+    if (authModal) {
+      authModal.addEventListener('click', (e) => {
+        if (e.target === authModal) {
+          authModal.style.display = 'none';
+        }
+      });
     }
 
-    // Также добавим document-delegation на случай, если кнопка появится позже
-    document.addEventListener('click', (e) => {
-      const btn = e.target.closest && e.target.closest('#discordSignIn');
-      if (btn) {
-        e.preventDefault();
-        if (typeof signInWithDiscord === 'function') signInWithDiscord();
-        else alert('Авторизация временно недоступна. Проверьте конфигурацию Supabase.');
-      }
-    });
-
-    // Кнопка "Войти" в хедере открывает модалку
-    document.getElementById('userSection')?.addEventListener('click', (e) => {
-      if (e.target.closest('.login-btn')) {
-        document.getElementById('authPage').style.display = 'flex';
-      }
-      if (e.target.closest('.user-avatar')) {
-        if (typeof signOutSupabase === 'function') {
-          if (confirm('Выйти из аккаунта?')) signOutSupabase();
+    // Закрытие IP модала
+    const closeIpBtn = document.querySelector('.close-ip-modal');
+    const ipModal = document.getElementById('ipModal');
+    
+    if (closeIpBtn) {
+      closeIpBtn.addEventListener('click', () => {
+        ipModal.style.display = 'none';
+      });
+    }
+    
+    if (ipModal) {
+      ipModal.addEventListener('click', (e) => {
+        if (e.target === ipModal) {
+          ipModal.style.display = 'none';
         }
-      }
-    });
+      });
+    }
 
-    // server-join кнопки
+    // Обработчик для userSection (кнопка войти)
+    const userSection = document.getElementById('userSection');
+    if (userSection) {
+      userSection.addEventListener('click', (e) => {
+        if (e.target.closest('.login-btn')) {
+          authModal.style.display = 'flex';
+        }
+        if (e.target.closest('.user-avatar')) {
+          if (typeof signOutSupabase === 'function') {
+            if (confirm('Выйти из аккаунта?')) {
+              signOutSupabase();
+            }
+          }
+        }
+      });
+    }
+
+    // Обработчики для кнопок присоединения к серверу
     document.querySelectorAll('.server-join-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         if (typeof checkAuthAndShowIp === 'function') {
           await checkAuthAndShowIp();
         } else {
-          document.getElementById('authPage').style.display = 'flex';
+          authModal.style.display = 'flex';
         }
       });
     });
 
-    // IP copy
+    // Обработчики для копирования IP
     document.querySelectorAll('.ip-btn').forEach(button => {
       button.addEventListener('click', function() {
         const ip = this.getAttribute('data-ip');
-        navigator.clipboard?.writeText(ip).then(() => {
-          this.classList.add('copied');
-          setTimeout(() => this.classList.remove('copied'), 1200);
-        }).catch(() => alert('Не удалось скопировать IP'));
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(ip).then(() => {
+            this.classList.add('copied');
+            setTimeout(() => this.classList.remove('copied'), 1200);
+          }).catch(() => {
+            alert('Не удалось скопировать IP');
+          });
+        } else {
+          // Fallback для старых браузеров
+          const textArea = document.createElement('textarea');
+          textArea.value = ip;
+          document.body.appendChild(textArea);
+          textArea.select();
+          try {
+            document.execCommand('copy');
+            this.classList.add('copied');
+            setTimeout(() => this.classList.remove('copied'), 1200);
+          } catch (err) {
+            alert('Не удалось скопировать IP');
+          }
+          document.body.removeChild(textArea);
+        }
       });
     });
   });
 </script>
+
 </body>
 </html>
-
