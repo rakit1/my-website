@@ -281,15 +281,41 @@
     }, 100 * (attempts + 1));
   }
 
+  // Привязка обработчика к кнопке Discord
+  function attachDiscordButton() {
+    const discordBtn = document.getElementById('discordSignIn');
+    if (discordBtn && !discordBtn._attached) {
+      console.log('🔗 Привязываем обработчик к кнопке Discord');
+      discordBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('🖱️ Клик по кнопке Discord!');
+        signInWithDiscord();
+      });
+      discordBtn._attached = true;
+    }
+  }
+
   // Запуск инициализации
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       console.log('📄 DOM загружен, запускаем инициализацию Supabase');
       tryInit();
+      setTimeout(attachDiscordButton, 100);
     });
   } else {
     console.log('📄 DOM уже готов, запускаем инициализацию Supabase');
     tryInit();
+    setTimeout(attachDiscordButton, 100);
   }
+
+  // Дополнительная привязка через делегирование событий
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('#discordSignIn');
+    if (btn) {
+      e.preventDefault();
+      console.log('🖱️ Делегированный клик по Discord кнопке!');
+      signInWithDiscord();
+    }
+  });
 
 })();
