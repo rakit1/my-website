@@ -288,10 +288,24 @@
       console.log('🔗 Привязываем обработчик к кнопке Discord');
       discordBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        console.log('🖱️ Клик по кнопке Discord!');
+        console.log('🖱️ Клик по кнопке Discord');
         signInWithDiscord();
       });
       discordBtn._attached = true;
+    }
+
+    // ТЕСТОВАЯ кнопка - удали после проверки
+    const testBtn = document.getElementById('testBtn');
+    if (testBtn && !testBtn._attached) {
+      testBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('🧪 ТЕСТ: Кнопка работает!');
+        console.log('🧪 ТЕСТ: sb доступен?', !!sb);
+        console.log('🧪 ТЕСТ: window.supabase доступен?', !!window.supabase);
+        alert('Тест пройден! Проверь консоль.');
+        signInWithDiscord();
+      });
+      testBtn._attached = true;
     }
   }
 
@@ -300,20 +314,20 @@
     document.addEventListener('DOMContentLoaded', () => {
       console.log('📄 DOM загружен, запускаем инициализацию Supabase');
       tryInit();
-      setTimeout(attachDiscordButton, 100);
+      attachDiscordButton();
     });
   } else {
     console.log('📄 DOM уже готов, запускаем инициализацию Supabase');
     tryInit();
-    setTimeout(attachDiscordButton, 100);
+    attachDiscordButton();
   }
 
   // Дополнительная привязка через делегирование событий
-  document.addEventListener('click', function(e) {
-    const btn = e.target.closest('#discordSignIn');
-    if (btn) {
+  document.addEventListener('click', (e) => {
+    const discordBtn = e.target.closest('#discordSignIn');
+    if (discordBtn) {
       e.preventDefault();
-      console.log('🖱️ Делегированный клик по Discord кнопке!');
+      console.log('🖱️ Клик по Discord через делегирование');
       signInWithDiscord();
     }
   });
