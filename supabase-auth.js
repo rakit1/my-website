@@ -2,19 +2,17 @@
 (function() {
   // === Настройка Supabase ===
   const SUPABASE_URL = "https://egskxyxgzdidfbxhjaud.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw"; // ЗАМЕНИТЕ на ваш настоящий ключ!
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw";
   let supabase;
 
   // === Основная инициализация ===
   function initAuth() {
-    // Проверка, что Supabase загружен
-    if (typeof Supabase === "undefined") {
+    // Проверка, что Supabase загружен (новый способ)
+    if (typeof supabase === "undefined") {
       console.error("Supabase не загружен. Проверьте подключение скриптов!");
       return;
     }
 
-    supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
     // Инициализация обработчиков событий
     initEventHandlers();
     
@@ -81,7 +79,10 @@
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "discord",
-        options: { redirectTo: window.location.origin } // Исправлено на origin для безопасности
+        options: { 
+          redirectTo: window.location.origin,
+          scopes: 'identify email' // Добавляем необходимые scope
+        }
       });
       if (error) throw error;
     } catch (err) {
@@ -107,16 +108,26 @@
     const userSection = document.getElementById("userSection");
     if (!userSection) return;
     
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error) {
+      console.error("Ошибка получения пользователя:", error);
+      return;
+    }
 
     if (user) {
-      const name = user.user_metadata?.full_name || user.user_metadata?.global_name || "User";
+      const name = user.user_metadata?.full_name || user.user_metadata?.global_name || user.email || "User";
       const avatarUrl = user.user_metadata?.avatar_url || null;
+      
+      // Формируем URL аватара правильно
+      const finalAvatarUrl = avatarUrl ? 
+        (avatarUrl.startsWith('http') ? avatarUrl : `https://cdn.discordapp.com/avatars/${user.id}/${avatarUrl}.png`) 
+        : null;
 
       userSection.innerHTML = `
         <div class="user-info">
           <div class="user-avatar" title="${name}">
-            ${avatarUrl ? `<img src="${avatarUrl}" alt="${name}" style="width:100%;height:100%;border-radius:50%;">` : name[0]}
+            ${finalAvatarUrl ? `<img src="${finalAvatarUrl}" alt="${name}" style="width:100%;height:100%;border-radius:50%;">` : name[0]}
           </div>
           <span>${name}</span>
         </div>
@@ -128,8 +139,13 @@
 
   // === Проверка сессии при загрузке страницы ===
   async function checkSession() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) updateUserUI();
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      if (session?.user) updateUserUI();
+    } catch (err) {
+      console.error("Ошибка проверки сессии:", err);
+    }
   }
 
   // === Обработка кнопок присоединения к серверу ===
@@ -142,10 +158,23 @@
     }
   }
 
-  // Запускаем инициализацию когда DOM готов
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAuth);
+  // Инициализация Supabase и запуск когда все готово
+  function initializeApp() {
+    // Создаем клиент Supabase
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // Запускаем инициализацию когда DOM готов
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAuth);
+    } else {
+      initAuth();
+    }
+  }
+
+  // Запускаем инициализацию когда Supabase загружен
+  if (window.supabase) {
+    initializeApp();
   } else {
-    initAuth();
+    window.addEventListener('supabase-loaded', initializeApp);
   }
 })();
