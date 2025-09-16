@@ -375,7 +375,7 @@
     box-shadow: 0 8px 22px rgba(99, 91, 255, 0.15);
   }
 
-  /* Auth modal */
+  /* Auth modal (now only Discord button inside) */
   .auth-container {
     display: none;
     justify-content: center;
@@ -399,6 +399,7 @@
     max-width: 400px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
     position: relative;
+    text-align: center;
   }
 
   .auth-title {
@@ -407,42 +408,6 @@
     margin-bottom: 30px;
     font-weight: 700;
     color: var(--text);
-  }
-
-  .auth-input {
-    width: 100%;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 10px;
-    padding: 14px 16px;
-    color: var(--text);
-    font-size: 1rem;
-    margin-bottom: 20px;
-    transition: all 0.2s ease;
-  }
-  
-  .auth-input:focus {
-    outline: none;
-    border-color: var(--primary);
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .auth-btn {
-    width: 100%;
-    background: linear-gradient(180deg, var(--primary), var(--primary-strong));
-    border: none;
-    color: white;
-    padding: 14px;
-    border-radius: 10px;
-    font-weight: 700;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: all 0.2s ease;
-  }
-  
-  .auth-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 22px rgba(99, 91, 255, 0.15);
   }
 
   .close-auth {
@@ -743,6 +708,7 @@
   </nav>
 
   <div id="userSection">
+    <!-- будет заменён скриптом на аватар/имя или кнопку входа -->
     <button class="login-btn">Войти</button>
   </div>
 
@@ -768,8 +734,8 @@
         <div class="hero-actions">
           <button class="btn btn-primary" onclick="scrollToServers()">Наши сервера</button>
           <a href="https://discord.com" class="btn btn-discord" target="_blank">
-            <svg class="discord-icon" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19.27 5.33C17.94 4.71 16.5 4.26 15 4a.09.09 0 0 0-.07.03c-.18.33-.39.76-.53 1.09a16.09 16.09 0 0 0-4.8 0c-.14-.34-.35-.76-.54-1.09c-.01-.02-.04-.03-.07-.03c-1.5.26-2.93.71-4.27 1.33c-.01 0-.02.01-.03.02C2.44 8.78 1.71 12.23 2.04 15.65c0 .02.01.04.03.05c1.58 1.15 3.12 1.84 4.64 2.3c.03.01.06 0 .07-.02c.4-.55.76-1.13 1.07-1.74c.02-.04 0-.08-.04-.09c-.57-.22-1.11-.48-1.64-.78c-.04-.02-.04-.08-.01-.11c.11-.08.22-.17.33-.25c.02-.02.05-.02.07-.01c3.44 1.57 7.15 1.57 10.55 0c.02-.01.05-.01.07.01c.11.09.22.17.33.26c.04.03.04.09-.01.11c-.52.31-1.07.56-1.64.78c-.04.01-.05.06-.04.09c.32.61.67 1.19 1.07 1.74c.03.01.06.02.09.01c1.52-.46 3.06-1.15 4.64-2.3c.02-.01.03-.03.03-.05c.40-3.98-.64-7.38-2.35-10.3c-.01-.02-.02-.03-.04-.03zm-10.52 8.38c-.99 0-1.8-.9-1.8-2.02s.8-2.02 1.8-2.02c1 0 1.81.9 1.8 2.02c0 1.12-.8 2.02-1.8 2.02zm6.5 0c-.99 0-1.8-.9-1.8-2.02s.8-2.02 1.8-2.02c1 0 1.81.9 1.8 2.02c0 1.12-.8 2.02-1.8 2.02z"/>
+            <svg class="discord-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M19.27 5.33C17.94 4.71 16.5 4.26 15 4a.09.09 0 0 0-.07.03c-.18.33-.39.76-.53 1.09a16.09 16.09 0 0 0-4.8 0c-.14-.34-.35-.76-.54-1.09c-.01-.02-.04-.03-.07-.03c-1.5.26-2.93.71-4.27[...]"/>
             </svg>
             Discord
           </a>
@@ -816,7 +782,7 @@
             <h3 class="server-name">CoBuilding</h3>
             <span class="online-count">20 онлайн</span>
           </div>
-          <p class="server-info">Сервер для совместного строительства и творчества. Создавайте amazing проекты вместе с другими игроками!</p>
+          <p class="server-info">Сервер для совместного строительства и творчества. Создавайте amazing проекты вместе с другими игроками.</p>
           
           <button class="server-join-btn" type="button" aria-label="Присоединиться к CoBuilding">Присоединиться</button>
         </div>
@@ -829,17 +795,22 @@
   </footer>
 </main>
 
-<!-- Auth Modal (ник + пароль, тот же стиль) -->
+<!-- Auth Modal (упрощённый: только вход через Discord, дизайн сохранён) -->
 <div id="authPage" class="auth-container">
   <div class="auth-box">
     <button class="close-auth" aria-label="Закрыть">&times;</button>
-    <h2 class="auth-title">Вход / Регистрация</h2>
-    <input type="text" id="nicknameInput" class="auth-input" placeholder="Никнейм (например: ivan123)" maxlength="30" aria-label="Никнейм">
-    <input type="password" id="passwordInput" class="auth-input" placeholder="Пароль" aria-label="Пароль">
-    <div style="display:flex;gap:10px;">
-      <button id="loginBtn" class="auth-btn" type="button">Войти</button>
-      <button id="signupBtn" class="auth-btn" type="button" style="background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text);">Регистрация</button>
-    </div>
+    <h2 class="auth-title">Войти через Discord</h2>
+
+    <p style="color:var(--muted); margin-bottom:18px;">
+      Вход доступен только через Discord — безопасно и быстро.
+    </p>
+
+    <button id="discordSignIn" class="btn-discord" aria-label="Войти через Discord" style="margin:0 auto;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M19.27 5.33C17.94 4.71 16.5 4.26 15 4a.09.09 0 0 0-.07.03c-.18.33-.39.76-.53 1.09a16.09 16.09 0 0 0-4.8 0c-.14-.34-.35-.76-.54-1.09c-.01-.02-.04-.03-.07-.03c-1.5.26-2.93.71-4.27[...]" />
+      </svg>
+      Войти через Discord
+    </button>
   </div>
 </div>
 
@@ -850,7 +821,7 @@
     <h3 class="ip-modal-title">Выберите регион для подключения</h3>
     
     <div class="ip-buttons">
-      <div class="ip-btn" data-ip="cobuilding.aboba.host">
+      <div class="ip-btn" data-ip="cobuilding.aboba.host" tabindex="0">
         <div>
           <div class="ip-address">cobuilding.aboba.host</div>
           <div class="ip-region">Российский регион (для стабильного подключения из РФ)</div>
@@ -858,7 +829,7 @@
         <div class="copy-indicator">Скопировано!</div>
       </div>
       
-      <div class="ip-btn" data-ip="cbworlds.aboba.host">
+      <div class="ip-btn" data-ip="cbworlds.aboba.host" tabindex="0">
         <div>
           <div class="ip-address">cbworlds.aboba.host</div>
           <div class="ip-region">Европейский регион</div>
@@ -869,8 +840,9 @@
   </div>
 </div>
 
-<!-- Supabase и auth логика -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<!-- Supabase (v2) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+<!-- Our auth integration (replaces old supabase-auth.js) -->
 <script src="supabase-auth.js"></script>
 
 <script>
@@ -880,14 +852,10 @@
   });
 
   function initApp() {
-    // Try to let supabase-auth.js populate user if available via its onAuthStateChange.
-    // Fallback to localStorage (legacy) if supabase not available or user prefers local.
-    if (window.sb) {
-      // supabase-auth.js will call updateUserSectionFromSession on load.
-    } else {
-      // Legacy fallback (localStorage username only)
-      const currentUser = localStorage.getItem('currentUser');
-      updateUserSection(currentUser);
+    // Let supabase-auth.js populate user if available via its onAuthStateChange.
+    // If supabase not available, fallback keeps the current "Войти" button.
+    if (typeof updateUserSectionFromSession === 'function') {
+      // supabase-auth.js will call updateUserSectionFromSession on load (itself)
     }
     setupEventListeners();
   }
@@ -909,46 +877,6 @@
             updateUserSection(null);
           }
         }
-      }
-    });
-
-    // Auth modal buttons: prefer supabase methods if available, else fallback to local logic
-    document.getElementById('signupBtn').addEventListener('click', async function() {
-      const nick = document.getElementById('nicknameInput').value.trim();
-      const pwd = document.getElementById('passwordInput').value;
-      if (!nick || !pwd) return alert('Заполните ник и пароль');
-      if (typeof signUpWithNick === 'function') {
-        try {
-          await signUpWithNick(nick, pwd);
-          alert('Регистрация прошла. Войдите используя тот же ник и пароль.');
-          hideAuthModal();
-        } catch (err) {
-          // signUpWithNick показывает alert в случае ошибки
-        }
-      } else {
-        // Legacy: store only nick locally (no password handling)
-        localStorage.setItem('currentUser', nick);
-        updateUserSection(nick);
-        hideAuthModal();
-      }
-    });
-
-    document.getElementById('loginBtn').addEventListener('click', async function() {
-      const nick = document.getElementById('nicknameInput').value.trim();
-      const pwd = document.getElementById('passwordInput').value;
-      if (!nick || !pwd) return alert('Введите ник и пароль');
-      if (typeof signInWithNick === 'function') {
-        try {
-          await signInWithNick(nick, pwd);
-          hideAuthModal();
-        } catch (err) {
-          // signInWithNick показывает alert в случае ошибки
-        }
-      } else {
-        // Legacy login (no password check)
-        localStorage.setItem('currentUser', nick);
-        updateUserSection(nick);
-        hideAuthModal();
       }
     });
 
@@ -988,104 +916,47 @@
       });
     });
 
-    // Enter in inputs triggers login
-    document.getElementById('passwordInput').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') document.getElementById('loginBtn').click();
-    });
-
     // Mobile menu
     const menuBtn = document.querySelector('.mobile-menu-btn');
     const nav = document.querySelector('nav');
 
-    if (window.innerWidth <= 520) {
-      menuBtn.style.display = 'flex';
-    }
-
-    menuBtn.addEventListener('click', function() {
+    menuBtn?.addEventListener('click', function() {
       nav.classList.toggle('active');
     });
-
-    document.querySelectorAll('nav a').forEach(link => {
-      link.addEventListener('click', () => {
-        nav.classList.remove('active');
-      });
-    });
-
-    window.addEventListener('resize', function() {
-      menuBtn.style.display = window.innerWidth > 520 ? 'none' : 'flex';
-      if (window.innerWidth > 520) nav.classList.remove('active');
-    });
   }
 
-  function scrollToServers() {
-    document.getElementById('servers-section').scrollIntoView({ 
-      behavior: 'smooth' 
-    });
-  }
-
-  // Update UI (same safe approach)
-  function updateUserSection(username) {
-    const userSection = document.getElementById('userSection');
-    userSection.innerHTML = '';
-    if (username) {
-      const container = document.createElement('div');
-      container.className = 'user-info';
-      const avatar = document.createElement('div');
-      avatar.className = 'user-avatar';
-      avatar.textContent = username.charAt(0).toUpperCase();
-      const nameSpan = document.createElement('span');
-      nameSpan.textContent = username;
-      container.appendChild(avatar);
-      container.appendChild(nameSpan);
-      userSection.appendChild(container);
-    } else {
-      const btn = document.createElement('button');
-      btn.className = 'login-btn';
-      btn.type = 'button';
-      btn.textContent = 'Войти';
-      userSection.appendChild(btn);
-    }
-  }
-
+  // Modal helpers (existing logic used in many places)
   function showAuthModal() {
     document.getElementById('authPage').style.display = 'flex';
-    document.getElementById('nicknameInput').value = '';
-    document.getElementById('passwordInput').value = '';
-    document.getElementById('nicknameInput').focus();
   }
-
   function hideAuthModal() {
     document.getElementById('authPage').style.display = 'none';
   }
-
   function showIpModal() {
     document.getElementById('ipModal').style.display = 'flex';
   }
-
   function hideIpModal() {
     document.getElementById('ipModal').style.display = 'none';
   }
 
-  // copyIP as before (same behaviour)
-  async function copyIP(ip, element) {
-    if (element.classList.contains('copied')) return;
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(ip);
-      } else {
-        const textArea = document.createElement('textarea');
-        textArea.value = ip;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-9999px';
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-      }
-      element.classList.add('copied');
-      setTimeout(() => element.classList.remove('copied'), 1600);
-    } catch (err) {
-      try { window.prompt('Скопируйте IP вручную:', ip); } catch (_) {}
+  // copy ip helper
+  function copyIP(ip, el) {
+    navigator.clipboard?.writeText(ip).then(() => {
+      el.classList.add('copied');
+      setTimeout(() => el.classList.remove('copied'), 1200);
+    }).catch(() => {
+      alert('Не удалось скопировать IP');
+    });
+  }
+
+  // fallback UI update for local-only mode (kept for compatibility)
+  function updateUserSection(name) {
+    const sec = document.getElementById('userSection');
+    if (!name) {
+      sec.innerHTML = '<button class="login-btn">Войти</button>';
+    } else {
+      const initials = (name[0] || 'U').toUpperCase();
+      sec.innerHTML = '<div class="user-info"><div class="user-avatar">' + initials + '</div><div style="margin-left:8px">' + name + '</div></div>';
     }
   }
 </script>
