@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MyProject — Главная</title>
+<style>
+  :root{
+    --bg: #0f0f12;         /* единый фон по всей странице */
+    --text: #f7f7fb;
+    --muted: #9aa0aa;
+    --primary: #635bff;
+    --primary-strong: #5148d8;
+    --radius: 14px;
+    --gap: 40px;
+  }
+
+  /* Баз */
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background:var(--bg);
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    line-height:1.45;
+    scroll-behavior: smooth;
+  }
+
+  /* Хедер — тот же цвет, чтобы не было "полос" */
+  header{
+    width:100%;
+    background:var(--bg);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 40px;
+    position:sticky;
+    top:0;
+    z-index:40;
+  }
+  .logo{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    font-weight:700;
+    color:var(--primary);
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+  }
+  .logo img{height:32px; width:auto; display:block}
+
+  nav{display:flex; gap:22px; align-items:center}
+  nav a{
+    color:var(--muted);
+    text-decoration:none;
+    font-weight:600;
+    font-size:0.95rem;
+    transition: color 0.2s ease;
+    position: relative;
+  }
+  nav a:hover{color:var(--primary)}
+  nav a.active {
+    color: var(--text);
+  }
+  nav a.active::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--primary);
+    border-radius: 2px;
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, var(--primary), #8a2be2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: white;
+  }
+
+  .login-btn{
+    background:linear-gradient(180deg,var(--primary),var(--primary-strong));
+    border:none;
+    color:white;
+    padding:8px 16px;
+    border-radius:10px;
+    font-weight:700;
+    cursor:pointer;
+    transition: transform 0.1s ease;
+  }
+  .login-btn:active{transform:scale(.97)}
+
+  /* Контент/герой */
+  .wrap{
+    max-width:1200px;
+    margin:48px auto;
+    padding:0 28px;
+  }
+
+  .hero{
+    display:flex;
+    align-items:center;
+    gap:var(--gap);
+    justify-content:space-between;
+  }
+
+  /* Текст влево (как просил) */
+  .hero-text{
+    width:54%;
+    min-width:320px;
+    text-align:left;
+  }
+  .hero h1{
+    margin:0 0 18px 0;
+    font-size:3.0rem;
+    line-height:1.03;
+    letter-spacing:-0.6px;
+    font-weight:800;
+    color:var(--text);
+  }
+  .hero p{
+    margin:0 0 26px 0;
+    color:var(--muted);
+    font-size:1.03rem;
+    max-width:56ch;
+  }
+
+  .hero-actions{
+    display:flex;
+    gap:14px;
+    align-items:center;
+    margin-top:8px;
+  }
+
+  .btn{
+    padding:12px 20px;
+    border-radius:12px;
+    font-weight:700;
+    cursor:pointer;
+    border:none;
+    font-size:1rem;
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary{
+    background:linear-gradient(180deg,var(--primary),var(--primary-strong));
+    color:#fff;
+    box-shadow:0 6px 18px rgba(99,91,255,0.10);
+  }
+  .btn-primary:hover{transform:translateY(-3px); box-shadow:0 8px 22px rgba(99,91,255,0.15)}
+
+  /* Discord кнопка */
+  .btn-discord{
+    background:transparent;
+    color:var(--text);
+    border:1px solid rgba(255,255,255,0.06);
+    padding:12px 18px;
+    border-radius:12px;
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    transition:all .18s ease;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .btn-discord:hover{
+    border-color:rgba(88, 101, 242, 0.5);
+    color: #5865F2;
+    transform: translateY(-2px);
+  }
+
+  .discord-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Блок с изображением справа */
+  .hero-media{
+    width:42%;
+    min-width:300px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+  }
+
+  .media-frame{
+    width:100%;
+    border-radius:36px;
+    overflow:hidden;
+    display:block;
+    /* чуть заметная тень вокруг картинки */
+    box-shadow: -30px 30px 80px rgba(0,0,0,0.55), inset 0 0 40px rgba(0,0,0,0.15);
+    background:linear-gradient(0deg, rgba(0,0,0,0.25), rgba(0,0,0,0.08));
+  }
+  .media-frame img{
+    width:100%;
+    height:auto;
+    display:block;
+    object-fit:cover;
+    transform:translateY(0);
+    display:block;
+  }
+
+  footer{
+    margin-top:80px;
+    padding:22px 0;
+    text-align:center;
+    color:var(--muted);
+    border-top:1px solid rgba(255,255,255,0.02);
+    background:var(--bg);
+  }
+
+  /* Стили для страницы авторизации */
+  .auth-container {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+    padding: 20px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 15, 18, 0.95);
+    z-index: 100;
+  }
+
+  .auth-box {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius);
+    padding: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  }
+
+  .auth-title {
+    text-align: center;
+    font-size: 1.8rem;
+    margin-bottom: 30px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .auth-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-size: 1rem;
+    margin-bottom: 20px;
+    transition: all 0.2s ease;
+  }
+
+  .auth-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .auth-btn {
+    width: 100%;
+    background: linear-gradient(180deg, var(--primary), var(--primary-strong));
+    border: none;
+    color: white;
+    padding: 14px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+  }
+
+  .auth-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(99, 91, 255, 0.15);
+  }
+
+  .close-auth {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+
+  .close-auth:hover {
+    color: var(--text);
+  }
+
+  /* Секция преимуществ */
+  .features {
+    margin: 100px 0;
+  }
+  
+  .section-title {
+    text-align: center;
+    font-size: 2.2rem;
+    margin-bottom: 60px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+  }
+  
+  .feature-card {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius);
+    padding: 30px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+  }
+  
+  .feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  }
+  
+  .feature-icon {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    color: var(--primary);
+  }
+  
+  .feature-card h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.3rem;
+  }
+  
+  .feature-card p {
+    color: var(--muted);
+    margin: 0;
+    line-height: 1.6;
+  }
+  
+  /* Секция серверов */
+  .servers {
+    margin: 100px 0;
+  }
+  
+  .server-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 25px;
+  }
+  
+  .server-card {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius);
+    padding: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    transition: all 0.3s ease;
+    max-width: 500px;
+  }
+  
+  .server-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    border-color: rgba(99, 91, 255, 0.1);
+  }
+  
+  .server-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+  
+  .server-name {
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin: 0;
+  }
+  
+  .online-count {
+    background: rgba(99, 91, 255, 0.1);
+    color: var(--primary);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  
+  .server-info {
+    color: var(--muted);
+    margin: 0 0 20px 0;
+    line-height: 1.5;
+  }
+  
+  .server-ip-section {
+    margin-top: 25px;
+  }
+  
+  .server-ip-title {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  
+  .server-ip-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .ip-button {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 12px 16px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  
+  .ip-button:hover {
+    border-color: rgba(99, 91, 255, 0.22);
+    background: rgba(99, 91, 255, 0.05);
+  }
+  
+  .ip-button.copied {
+    background: rgba(99, 91, 255, 0.12);
+    border-color: rgba(99, 91, 255, 0.3);
+  }
+  
+  .ip-address {
+    font-family: monospace;
+    font-size: 0.95rem;
+    color: var(--text);
+  }
+  
+  .ip-region {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  
+  .copy-indicator {
+    color: var(--primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  
+  .ip-button.copied .copy-indicator {
+    opacity: 1;
+  }
+  
+  /* Стили для отображения онлайн в реальном времени */
+  .online-realtime {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 0.9rem;
+  }
+  
+  .online-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+    animation: pulse 2s infinite;
+  }
+  
+  .online-text {
+    color: var(--muted);
+  }
+  
+  .online-number {
+    font-weight: 700;
+    color: var(--primary);
+  }
+  
+  @keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+  }
+  
+  /* Адаптив */
+  @media (max-width:1000px){
+    .hero{flex-direction:column-reverse; gap:24px}
+    .hero-text{width:100%; text-align:center}
+    .hero-media{width:88%}
+    .hero h1{font-size:2.4rem}
+    .hero p{margin-left:auto; margin-right:auto}
+  }
+
+  @media (max-width:768px) {
+    .features-grid,
+    .server-cards {
+      grid-template-columns: 1fr;
+    }
+    
+    .section-title {
+      font-size: 1.8rem;
+      margin-bottom: 40px;
+    }
+    
+    .auth-box {
+      padding: 30px 20px;
+    }
+  }
+
+  @media (max-width:520px){
+    .wrap{padding:0 16px}
+    .hero h1{font-size:1.9rem}
+    
+    header {
+      padding: 16px 20px;
+    }
+    
+    .user-info {
+      font-size: 0.8rem;
+    }
+    
+    .user-avatar {
+      width: 28px;
+      height: 28px;
+      font-size: 0.8rem;
+    }
+    
+    nav {
+      position: fixed;
+      top: 70px;
+      left: 0;
+      width: 100%;
+      background: var(--bg);
+      flex-direction: column;
+      padding: 20px;
+      gap: 15px;
+      transform: translateY(-100%);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    nav.active {
+      transform: translateY(0);
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .mobile-menu-btn {
+      display: flex;
+    }
+    
+    .login-btn {
+      font-size: 0.85rem;
+      padding: 6px 12px;
+    }
+    
+    .hero-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .btn-discord {
+      justify-content: center;
+    }
+    
+    nav a.active::after {
+      bottom: -3px;
+    }
+  }
+
+  /* Уважение к users с уменьшением анимации */
+  @media (prefers-reduced-motion: reduce){
+    .feature-card, .server-card { transition: none; }
+    .online-dot { animation: none; }
+  }
+
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo" aria-hidden="false">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="22" height="22" rx="6" fill="#111"/>
+      <circle cx="8.5" cy="10.5" r="3.3" fill="#635bff"/>
+      <circle cx="15.5" cy="13.7" r="2.2" fill="#f6f7fb" opacity="0.06"/>
+    </svg>
+    MYPROJECT
+  </div>
+
+  <nav role="navigation" aria-label="Главное меню">
+    <a href="#" class="active">Главная</a>
+    <a href="#">Как играть</a>
+    <a href="#">Поддержка</a>
+  </nav>
+
+  <div id="userSection">
+    <!-- Здесь будет отображаться информация о пользователе или кнопка входа -->
+  </div>
+
+  <button class="mobile-menu-btn" aria-label="Открыть меню" style="display: none;">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+</header>
+
+<main>
+  <!-- Главная страница -->
+  <div id="mainPage">
+    <div class="wrap">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-text">
+          <h1 id="hero-title">Уникальные игровые серверы</h1>
+          <p>Здесь вы найдёте новые возможности, дружеское комьюнити и стабильный сервер без доната и приватов.</p>
+
+          <div class="online-realtime">
+            <div class="online-dot"></div>
+            <span class="online-text">Онлайн: <span class="online-number" id="total-players">0</span> игроков</span>
+          </div>
+
+          <div class="hero-actions" role="group" aria-label="Действия">
+            <button class="btn btn-primary" type="button" onclick="scrollToServers()">Наши сервера</button>
+
+            <!-- Discord кнопка -->
+            <a href="https://discord.com" class="btn btn-discord" target="_blank" title="Наш Discord">
+              <svg class="discord-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19.27 5.33C17.94 4.71 16.5 4.26 15 4a.09.09 0 0 0-.07.03c-.18.33-.39.76-.53 1.09a16.09 16.09 0 0 0-4.8 0c-.14-.34-.35-.76-.54-1.09c-.01-.02-.04-.03-.07-.03c-1.5.26-2.93.71-4.27 1.33c-.01 0-.02.01-.03.02C2.44 8.78 1.71 12.23 2.04 15.65c0 .02.01.04.03.05c1.58 1.15 3.12 1.84 4.64 2.3c.03.01.06 0 .07-.02c.4-.55.76-1.13 1.07-1.74c.02-.04 0-.08-.04-.09c-.57-.22-1.11-.48-1.64-.78c-.04-.02-.04-.08-.01-.11c.11-.08.22-.17.33-.25c.02-.02.05-.02.07-.01c3.44 1.57 7.15 1.57 10.55 0c.02-.01.05-.01.07.01c.11.09.22.17.33.26c.04.03.04.09-.01.11c-.52.31-1.07.56-1.64.78c-.04.01-.05.06-.04.09c.32.61.67 1.19 1.07 1.74c.03.01.06.02.09.01c1.52-.46 3.06-1.15 4.64-2.3c.02-.01.03-.03.03-.05c.4-3.98-.64-7.38-2.35-10.3c-.01-.02-.02-.03-.04-.03zm-10.52 8.38c-.99 0-1.8-.9-1.8-2.02s.8-2.02 1.8-2.02c1 0 1.81.9 1.8 2.02c0 1.12-.8 2.02-1.8 2.02zm6.5 0c-.99 0-1.8-.9-1.8-2.02s.8-2.02 1.8-2.02c1 0 1.81.9 1.8 2.02c0 1.12-.8 2.02-1.8 2.02z"/>
+              </svg>
+              Discord
+            </a>
+          </div>
+        </div>
+
+        <div class="hero-media" aria-hidden="false">
+          <div class="media-frame" role="img" aria-label="Игровой баннер">
+            <!-- Помести 5opka.png в ту же папку, где этот HTML -->
+            <img src="5opka.png" alt="Игровой персонаж — баннер" loading="eager">
+          </div>
+        </div>
+      </section>
+      
+      <!-- Секция преимуществ -->
+      <section class="features" aria-labelledby="features-title">
+        <h2 id="features-title" class="section-title">Наши преимущества</h2>
+        
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🚀</div>
+            <h3>Высокая производительность</h3>
+            <p>Мощное железо обеспечивает стабильную работу без лагов и задержек даже при полной загрузке сервера.</p>
+          </div>
+          
+          <div class="feature-card">
+            <div class="feature-icon">🛡️</div>
+            <h3>Честный геймплей</h3>
+            <p>Никакого платного преимущества. Все игроки в равных условиях, без доната влияющего на баланс.</p>
+          </div>
+          
+          <div class="feature-card">
+            <div class="feature-icon">👥</div>
+            <h3>Активное сообщество</h3>
+            <p>Присоединяйтесь к нашему дружелюбному комьюнити, где ценят каждого игрока и помогают новичкам.</p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Секция серверов -->
+      <section class="servers" aria-labelledby="servers-title" id="servers-section">
+        <h2 id="servers-title" class="section-title">Наши сервера</h2>
+        
+        <div class="server-cards">
+          <!-- Только CoBuilding сервер -->
+          <div class="server-card">
+            <div class="server-header">
+              <h3 class="server-name">CoBuilding</h3>
+              <span class="online-count"><span id="cobuilding-players">0</span> онлайн</span>
+            </div>
+            <p class="server-info">Сервер для совместного строительства и творчества. Создавайте amazing проекты вместе с другими игроками!</p>
+            
+            <div class="server-ip-section">
+              <div class="server-ip-title">Адреса для подключения:</div>
+              <div class="server-ip-buttons">
+                <div class="ip-button" data-ip="cobuilding.aboba.host">
+                  <div>
+                    <div class="ip-address">cobuilding.aboba.host</div>
+                    <div class="ip-region">Российский регион (для стабильного подключения из РФ)</div>
+                  </div>
+                  <div class="copy-indicator">Скопировано!</div>
+                </div>
+                
+                <div class="ip-button" data-ip="cbworlds.aboba.host">
+                  <div>
+                    <div class="ip-address">cbworlds.aboba.host</div>
+                    <div class="ip-region">Европейский регион</div>
+                  </div>
+                  <div class="copy-indicator">Скопировано!</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      © 2025 MyProject. Все права защищены.
+    </footer>
+  </div>
+
+  <!-- Страница авторизации (скрыта по умолчанию) -->
+  <div id="authPage" class="auth-container">
+    <button class="close-auth">&times;</button>
+    <div class="auth-box">
+      <h2 class="auth-title">Вход на сайт</h2>
+      <input type="text" id="usernameInput" class="auth-input" placeholder="Введите ваш никнейм" maxlength="20">
+      <button id="loginBtn" class="auth-btn">Войти</button>
+    </div>
+  </div>
+</main>
+
+<script>
+  // Функция для прокрутки к серверам
+  function scrollToServers() {
+    document.getElementById('servers-section').scrollIntoView({ 
+      behavior: 'smooth' 
+    });
+  }
+
+  // Инициализация при загрузке страницы
+  document.addEventListener('DOMContentLoaded', function() {
+    // Проверяем, авторизован ли пользователь
+    const currentUser = localStorage.getItem('currentUser');
+    
+    // Обновляем информацию о пользователе в хедере
+    updateUserSection(currentUser);
+    
+    // Обработчик кнопки входа в хедере
+    document.getElementById('userSection').addEventListener('click', function(e) {
+      if (e.target.classList.contains('login-btn') || e.target.closest('.login-btn')) {
+        showAuthModal();
+      }
+    });
+    
+    // Обработчик кнопки входа на странице авторизации
+    document.getElementById('loginBtn').addEventListener('click', function() {
+      const username = document.getElementById('usernameInput').value.trim();
+      
+      if (username) {
+        // Сохраняем пользователя в localStorage
+        localStorage.setItem('currentUser', username);
+        
+        // Обновляем информацию о пользователе
+        updateUserSection(username);
+        
+        // Скрываем модальное окно
+        hideAuthModal();
+      } else {
+        alert('Пожалуйста, введите ваш никнейм');
+      }
+    });
+    
+    // Закрытие модального окна
+    document.querySelector('.close-auth').addEventListener('click', hideAuthModal);
+    
+    // Закрытие модального окна по клику на фон
+    document.getElementById('authPage').addEventListener('click', function(e) {
+      if (e.target === this) {
+        hideAuthModal();
+      }
+    });
+    
+    // Вход по нажатию Enter
+    document.getElementById('usernameInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        document.getElementById('loginBtn').click();
+      }
+    });
+    
+    // Копирование IP серверов
+    document.querySelectorAll('.ip-button').forEach(button => {
+      button.addEventListener('click', function() {
+        const ip = this.getAttribute('data-ip');
+        
+        if(this.classList.contains('copied')) return;
+        
+        try {
+          if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(ip);
+          } else {
+            // Fallback для старых браузеров
+            const ta = document.createElement('textarea');
+            ta.value = ip;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+          }
+          
+          this.classList.add('copied');
+          
+          setTimeout(() => {
+            this.classList.remove('copied');
+          }, 1600);
+          
+        } catch(err) {
+          this.classList.add('copied');
+          setTimeout(() => {
+            this.classList.remove('copied');
+          }, 1600);
+        }
+      });
+    });
+    
+    // Симуляция онлайн в реальном времени
+    function updateOnlinePlayers() {
+      const cobuildingPlayers = Math.floor(Math.random() * 30) + 20;
+      document.getElementById('cobuilding-players').textContent = cobuildingPlayers;
+      document.getElementById('total-players').textContent = cobuildingPlayers;
+    }
+    
+    updateOnlinePlayers();
+    setInterval(updateOnlinePlayers, 30000);
+    
+    setInterval(() => {
+      const cobuildingElement = document.getElementById('cobuilding-players');
+      const current = parseInt(cobuildingElement.textContent);
+      const change = Math.random() > 0.5 ? 1 : -1;
+      const newValue = Math.max(20, current + change);
+      cobuildingElement.textContent = newValue;
+      document.getElementById('total-players').textContent = newValue;
+    }, 5000);
+  });
+
+  // Функция обновления секции пользователя
+  function updateUserSection(username) {
+    const userSection = document.getElementById('userSection');
+    
+    if (username) {
+      userSection.innerHTML = `
+        <div class="user-info">
+          <div class="user-avatar">${username.charAt(0).toUpperCase()}</div>
+          <span>${username}</span>
+        </div>
+      `;
+    } else {
+      userSection.innerHTML = `
+        <button class="login-btn" aria-label="Войти">Войти</button>
+      `;
+    }
+  }
+
+  // Функция показа модального окна авторизации
+  function showAuthModal() {
+    document.getElementById('authPage').style.display = 'flex';
+    document.getElementById('usernameInput').value = '';
+    document.getElementById('usernameInput').focus();
+  }
+
+  // Функция скрытия модального окна авторизации
+  function hideAuthModal() {
+    document.getElementById('authPage').style.display = 'none';
+  }
+</script>
+
+</body>
+</html>
