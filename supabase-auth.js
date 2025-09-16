@@ -6,8 +6,8 @@
 // и в Discord Developer Portal в Redirects добавлен:
 //   https://<YOUR_SUPABASE_PROJECT>.supabase.co/auth/v1/callback
 
-const SUPABASE_URL = 'https://<YOUR_SUPABASE_PROJECT>.supabase.co'; // <-- замените
-const SUPABASE_ANON_KEY = '<YOUR_SUPABASE_ANON_KEY>'; // <-- замените
+const SUPABASE_URL = 'https://egskxyxgzdidfbxhjaud.supabase.co'; // <-- замените
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw'; // <-- замените
 
 if (!window.supabase) {
   console.warn('Supabase SDK not found - make sure the CDN script is loaded before this file.');
