@@ -36,14 +36,16 @@ class AuthManager {
             this.signInWithDiscord();
         });
 
-        // User section clicks
+        // User section clicks для логина
         this.on('#userSection', 'click', (e) => {
             if (e.target.closest('.login-btn')) {
                 this.showModal('#authPage');
             }
-            if (e.target.closest('.user-avatar')) {
-                this.signOut();
-            }
+        });
+
+        // Кнопка выхода из аккаунта (новый метод)
+        this.on('.logout-btn', 'click', () => {
+            this.signOut();
         });
 
         // Close modals
@@ -86,7 +88,7 @@ class AuthManager {
         try {
             console.log('Начало авторизации через Discord...');
             
-            // ВАЖНО! Используем правильный URL для редиректа
+            // Используем фиксированный URL для редиректа
             const { data, error } = await this.supabase.auth.signInWithOAuth({
                 provider: 'discord',
                 options: { 
@@ -110,17 +112,16 @@ class AuthManager {
     }
 
     async signOut() {
-        if (confirm('Выйти из аккаунта?')) {
-            try {
-                const { error } = await this.supabase.auth.signOut();
-                if (error) throw error;
-                this.updateUI();
-                this.hideModal('#authPage');
-                this.hideModal('#ipModal');
-            } catch (error) {
-                console.error('Ошибка выхода:', error);
-                alert('Не удалось выйти из аккаунта');
-            }
+        // Удаляем запрос подтверждения, выходим сразу
+        try {
+            const { error } = await this.supabase.auth.signOut();
+            if (error) throw error;
+            this.updateUI();
+            this.hideModal('#authPage');
+            this.hideModal('#ipModal');
+        } catch (error) {
+            console.error('Ошибка выхода:', error);
+            alert('Не удалось выйти из аккаунта');
         }
     }
 
@@ -163,10 +164,11 @@ class AuthManager {
                 const name = user.user_metadata?.full_name || 
                             user.user_metadata?.global_name || 
                             user.email || 
-                            'User';
+                            'Пользователь';
                 
                 const avatarUrl = user.user_metadata?.avatar_url;
                 
+                // Обновляем HTML с новым выпадающим меню
                 userSection.innerHTML = `
                     <div class="user-info">
                         <div class="user-avatar" title="${name}">
@@ -175,7 +177,12 @@ class AuthManager {
                                 name[0]
                             }
                         </div>
-                        <span>${name}</span>
+                        <div class="user-dropdown">
+                            <span class="user-name">${name}</span>
+                            <div class="dropdown-menu">
+                                <button class="logout-btn">Выйти</button>
+                            </div>
+                        </div>
                     </div>
                 `;
             } else {
