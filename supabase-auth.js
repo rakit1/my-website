@@ -1,4 +1,3 @@
-// supabase-auth.js
 class AuthManager {
     constructor() {
         this.SUPABASE_URL = "https://egskxyxgzdidfbxhjaud.supabase.co";
@@ -15,15 +14,44 @@ class AuthManager {
         }
 
         try {
-            this.supabase = window.supabase.createClient(this.SUPABASE_URL, this.SUPABASE_ANON_KEY);
-            this.setupEventListeners();
-            await this.checkAuth();
-            
-            // Слушаем изменения статуса авторизации
+            // Явно включаем detectSessionInUrl и persistSession
+            this.supabase = window.supabase.createClient(
+                this.SUPABASE_URL,
+                this.SUPABASE_ANON_KEY,
+                {
+                    auth: {
+                        detectSessionInUrl: true,
+                        persistSession: true
+                    }
+                }
+            );
+
+            // Обработчик изменений статуса авторизации — вешаем раньше, чтобы отловить INITIAL_SESSION/SIGNED_IN
             this.supabase.auth.onAuthStateChange((event, session) => {
-                console.log('Auth state changed:', event);
+                console.log('Auth state changed:', event, session);
                 this.updateUI();
             });
+
+            this.setupEventListeners();
+
+            // Если в URL есть параметры OAuth (hash или query), попробуем извлечь сессию
+            if (window.location.hash.includes('access_token') || window.location.hash.includes('refresh_token') || window.location.search.includes('code')) {
+                try {
+                    console.log('Похоже на OAuth-редирект — пытаемся получить сессию из URL...');
+                    // supabase-js v2: парсит и сохраняет сессию
+                    await this.supabase.auth.getSessionFromUrl({ storeSession: true }).catch(err => {
+                        console.warn('getSessionFromUrl error (не критично):', err);
+                    });
+                    // Удалим параметры из URL (по желанию) чтобы избежать повторной обработки
+                    try {
+                        history.replaceState(null, '', window.location.pathname + window.location.search);
+                    } catch (e) {}
+                } catch (e) {
+                    console.warn('Ошибка при обработке URL сессии:', e);
+                }
+            }
+
+            await this.checkAuth();
         } catch (error) {
             console.error('Ошибка инициализации Supabase:', error);
         }
@@ -35,16 +63,6 @@ class AuthManager {
             e.preventDefault();
             this.signInWithDiscord();
         });
-
-        // УДАЛЯЕМ старый обработчик для клика по аватару - он больше не нужен!
-        // this.on('#userSection', 'click', (e) => {
-        //     if (e.target.closest('.login-btn')) {
-        //         this.showModal('#authPage');
-        //     }
-        //     if (e.target.closest('.user-avatar')) {
-        //         this.signOut();
-        //     }
-        // });
 
         // Новый обработчик только для кнопки входа
         this.on('#userSection', 'click', (e) => {
@@ -96,7 +114,8 @@ class AuthManager {
             const { data, error } = await this.supabase.auth.signInWithOAuth({
                 provider: 'discord',
                 options: { 
-                    redirectTo: 'https://rakit1.github.io/my-website/',
+                    // Лучше использовать точный redirect, который вы зарегистрировали в Supabase/Discord
+                    redirectTo: window.location.origin + window.location.pathname,
                     scopes: 'identify email'
                 }
             });
@@ -132,7 +151,9 @@ class AuthManager {
 
     async checkAuth() {
         try {
-            const { data: { session }, error } = await this.supabase.auth.getSession();
+            const result = await this.supabase.auth.getSession();
+            const session = result?.data?.session;
+            const error = result?.error;
             
             if (error) {
                 console.error('Ошибка проверки сессии:', error);
@@ -155,9 +176,19 @@ class AuthManager {
         if (!userSection) return;
 
         try {
-            const { data: { user }, error } = await this.supabase.auth.getUser();
-            
-            if (error) {
+            const res = await this.supabase.auth.getUser().catch(err => {
+                // Избегаем засорения консоли при ожидаемой ошибке AuthSessionMissingError
+                if (err && err.message && err.message.includes('AuthSessionMissingError')) {
+                    console.debug('Нет сессии (getUser):', err.message);
+                    return { data: { user: null }, error: err };
+                } else {
+                    throw err;
+                }
+            });
+
+            const { data: { user }, error } = res;
+
+            if (error && !user) {
                 console.error('Ошибка получения пользователя:', error);
                 userSection.innerHTML = '<button class="login-btn">Войти</button>';
                 return;
@@ -205,7 +236,16 @@ class AuthManager {
 
     async handleServerJoin() {
         try {
-            const { data: { user }, error } = await this.supabase.auth.getUser();
+            const res = await this.supabase.auth.getUser().catch(err => {
+                if (err && err.message && err.message.includes('AuthSessionMissingError')) {
+                    console.debug('Нет сессии при handleServerJoin');
+                    return { data: { user: null }, error: err };
+                } else {
+                    throw err;
+                }
+            });
+            
+            const { data: { user }, error } = res;
             
             if (error) {
                 console.error('Ошибка проверки пользователя:', error);
@@ -257,7 +297,7 @@ class AuthManager {
     }
 }
 
-// Глобальная переменная для доступа к менеджеру авторизации
+// Глобальная переменная для доступа к менеджера авторизации
 let authManager;
 
 document.addEventListener('DOMContentLoaded', function() {
