@@ -92,7 +92,14 @@ nav a.active::after {
   color: white;
 }
 
-/* Выпадающее меню пользователя */
+/* Стили для выпадающего меню */
+.user-info {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .user-dropdown {
   position: relative;
   cursor: pointer;
@@ -101,44 +108,57 @@ nav a.active::after {
 .user-name {
   color: var(--text);
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.user-name::after {
+  content: '▼';
+  font-size: 0.6rem;
+  opacity: 0.7;
+  transition: transform 0.2s ease;
+}
+
+.user-dropdown.active .user-name::after {
+  transform: rotate(180deg);
 }
 
 .dropdown-menu {
   position: absolute;
   top: 100%;
   right: 0;
-  background: rgba(20, 20, 25, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(20, 20, 25, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  width: 90px; /* Уменьшенная ширина */
-  padding: 5px 0; /* Уменьшенный отступ */
-  margin-top: 5px; /* Уменьшенный отступ сверху */
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  padding: 8px 0;
+  margin-top: 8px;
+  min-width: 100px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
   opacity: 0;
   visibility: hidden;
   transform: translateY(-10px);
   transition: all 0.2s ease;
-  z-index: 10;
+  z-index: 1000;
 }
 
-/* Показать меню при наведении */
-.user-dropdown:hover .dropdown-menu {
+.user-dropdown.active .dropdown-menu {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
 }
 
 .logout-btn {
-  display: block;
   width: 100%;
-  text-align: left;
   background: none;
   border: none;
   color: var(--muted);
-  font-size: 0.8rem; /* Уменьшенный размер */
-  padding: 5px 10px; /* Уменьшенный отступ */
+  padding: 8px 16px;
+  text-align: left;
   cursor: pointer;
-  transition: all 0.15s ease;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
 }
 
 .logout-btn:hover {
@@ -748,6 +768,6 @@ footer {
   
   .logout-btn {
     font-size: 0.75rem;
-    padding: 5px 8px;
+    padding: 4px 8px;
   }
 }
