@@ -41,11 +41,11 @@ class AuthManager {
             if (e.target.closest('.login-btn')) {
                 this.showModal('#authPage');
             }
-        });
-
-        // Кнопка выхода из аккаунта (новый метод)
-        this.on('.logout-btn', 'click', () => {
-            this.signOut();
+            
+            // Используем делегирование событий для кнопки выхода
+            if (e.target.closest('.logout-btn')) {
+                this.signOut();
+            }
         });
 
         // Close modals
@@ -112,7 +112,6 @@ class AuthManager {
     }
 
     async signOut() {
-        // Удаляем запрос подтверждения, выходим сразу
         try {
             const { error } = await this.supabase.auth.signOut();
             if (error) throw error;
