@@ -90,7 +90,6 @@ class AuthManager {
         }
     }
 
-    // --- ИЗМЕНЕНИЕ: убрано confirm, выход мгновенный ---
     async signOut() {
         try {
             const { error } = await this.supabase.auth.signOut();
@@ -102,7 +101,6 @@ class AuthManager {
             alert('Не удалось выйти из аккаунта');
         }
     }
-    // --- КОНЕЦ ИЗМЕНЕНИЯ ---
 
     async checkAuth() {
         try {
@@ -113,6 +111,7 @@ class AuthManager {
         } catch {}
     }
 
+    // --- ГЛАВНОЕ ИЗМЕНЕНИЕ: user-info-wrap для правильной структуры ---
     async updateUI() {
         const userSection = document.getElementById('userSection');
         if (!userSection) return;
