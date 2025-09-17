@@ -70,6 +70,12 @@ nav a.active::after {
   border-radius: 2px;
 }
 
+/* --- Доработка: .user-info-wrap для правильного hover меню --- */
+.user-info-wrap {
+  display: inline-block;
+  position: relative;
+}
+
 .user-info {
   display: flex;
   align-items: center;
@@ -93,14 +99,13 @@ nav a.active::after {
   overflow: hidden;
 }
 
-/* --- ИЗМЕНЕНИЯ: dropdown левее и всегда доступно при ховере --- */
+/* --- Дропдаун строго по центру ника+аватарки, hover на .user-info-wrap --- */
 .user-dropdown {
   display: none;
   position: absolute;
-  top: 100%;
-  left: 60%;            /* левее, под ником */
-  transform: translateX(-40%);
-  margin-top: -4px;     /* склеиваем меню и ник */
+  top: 110%;
+  left: 50%;
+  transform: translateX(-50%);
   background: rgba(25, 25, 35, 0.98);
   border: 1px solid rgba(255,255,255,0.09);
   border-radius: 8px;
@@ -111,11 +116,11 @@ nav a.active::after {
   z-index: 99;
   padding: 0;
   animation: dropdown-fade 0.18s;
-  /* pointer-events убран! */
+  margin-top: 2px;
 }
 
-.user-info:hover .user-dropdown,
-.user-info:focus-within .user-dropdown {
+.user-info-wrap:hover .user-dropdown,
+.user-info-wrap:focus-within .user-dropdown {
   display: block;
 }
 
@@ -148,7 +153,6 @@ nav a.active::after {
   background: rgba(99,91,255,0.16);
   color: var(--primary);
 }
-/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */
 
 .login-btn {
   background: linear-gradient(180deg, var(--primary), var(--primary-strong));
