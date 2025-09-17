@@ -71,27 +71,26 @@ nav a.active::after {
   border-radius: 2px;
 }
 
-/* УДАЛЯЕМ старые стили .user-info и .user-avatar */
-/*.user-info {*/
-/*  display: flex;*/
-/*  align-items: center;*/
-/*  gap: 10px;*/
-/*  color: var(--muted);*/
-/*  font-size: 0.9rem;*/
-/*}*/
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
 
-/*.user-avatar {*/
-/*  width: 32px;*/
-/*  height: 32px;*/
-/*  border-radius: 50%;*/
-/*  background: linear-gradient(45deg, var(--primary), #8a2be2);*/
-/*  display: flex;*/
-/*  align-items: center;*/
-/*  justify-content: center;*/
-/*  font-weight: 600;*/
-/*  color: white;*/
-/*  cursor: pointer;*/
-/*}*/
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, var(--primary), #8a2be2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+}
 
 .login-btn {
   background: linear-gradient(180deg, var(--primary), var(--primary-strong));
@@ -555,98 +554,6 @@ footer {
   transition: all 0.3s ease;
 }
 
-/* 🔽🔽🔽 НОВЫЕ СТИЛИ ДЛЯ ВЫПАДАЮЩЕГО МЕНЮ (ДОБАВЛЯЕМ ЗДЕСЬ) 🔽🔽🔽 */
-
-/* Стили для выпадающего меню пользователя */
-.user-dropdown {
-  position: relative;
-  display: inline-block;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 0.9rem;
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 8px;
-  transition: background-color 0.2s ease;
-}
-
-.user-info:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(45deg, var(--primary), #8a2be2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  color: white;
-}
-
-.user-avatar img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  background: rgba(30, 30, 35, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 8px;
-  min-width: 160px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-10px);
-  transition: all 0.2s ease;
-  z-index: 1000;
-  backdrop-filter: blur(10px);
-}
-
-.user-dropdown:hover .dropdown-menu {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(5px);
-}
-
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  color: var(--text);
-  text-decoration: none;
-  border-radius: 8px;
-  transition: background-color 0.2s ease;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
-.dropdown-item:hover {
-  background: rgba(99, 91, 255, 0.15);
-  color: var(--primary);
-}
-
-.dropdown-item svg {
-  width: 16px;
-  height: 16px;
-}
-
-/* 🔼🔼🔼 КОНЕЦ НОВЫХ СТИЛЕЙ 🔼🔼🔼 */
-
 /* Responsive design */
 @media (max-width: 1000px) {
   .hero {
@@ -708,17 +615,12 @@ footer {
   
   .user-info {
     font-size: 0.8rem;
-    padding: 6px 10px;
   }
   
   .user-avatar {
     width: 28px;
     height: 28px;
-  }
-  
-  .dropdown-menu {
-    right: -10px;
-    min-width: 140px;
+    font-size: 0.8rem;
   }
   
   nav {
