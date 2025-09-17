@@ -36,19 +36,9 @@ class AuthManager {
             this.signInWithDiscord();
         });
 
-        // User section clicks для логина
-        this.on('#userSection', 'click', (e) => {
-            if (e.target.closest('.login-btn')) {
-                this.showModal('#authPage');
-            }
-        });
-
-        // Обработчик для кнопки выхода - исправленный
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('.logout-btn')) {
-                e.preventDefault();
-                this.signOut();
-            }
+        // Кнопка входа
+        this.on('.login-btn', 'click', () => {
+            this.showModal('#authPage');
         });
 
         // Close modals
@@ -116,9 +106,10 @@ class AuthManager {
 
     async signOut() {
         try {
-            console.log('Выход из системы...');
+            console.log('Выполняется выход...');
             const { error } = await this.supabase.auth.signOut();
             if (error) throw error;
+            console.log('Выход выполнен успешно');
             this.updateUI();
             this.hideModal('#authPage');
             this.hideModal('#ipModal');
@@ -171,7 +162,7 @@ class AuthManager {
                 
                 const avatarUrl = user.user_metadata?.avatar_url;
                 
-                // Обновляем HTML с выпадающим меню
+                // Обновляем HTML с новым выпадающим меню
                 userSection.innerHTML = `
                     <div class="user-info">
                         <div class="user-avatar" title="${name}">
@@ -188,6 +179,10 @@ class AuthManager {
                         </div>
                     </div>
                 `;
+                
+                // Добавляем обработчики для нового меню
+                this.setupUserDropdownHandlers();
+                
             } else {
                 userSection.innerHTML = '<button class="login-btn">Войти</button>';
             }
@@ -195,6 +190,37 @@ class AuthManager {
             console.error('Ошибка обновления UI:', error);
             userSection.innerHTML = '<button class="login-btn">Войти</button>';
         }
+    }
+
+    setupUserDropdownHandlers() {
+        // Клик по имени пользователя для открытия/закрытия меню
+        const userName = document.querySelector('.user-name');
+        if (userName) {
+            userName.addEventListener('click', (e) => {
+                const dropdown = e.target.closest('.user-dropdown');
+                if (dropdown) {
+                    dropdown.classList.toggle('active');
+                    e.stopPropagation();
+                }
+            });
+        }
+
+        // Кнопка выхода
+        const logoutBtn = document.querySelector('.logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                console.log('Кнопка выхода нажата');
+                this.signOut();
+            });
+        }
+
+        // Закрытие меню при клике вне его
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.user-dropdown')) {
+                const dropdowns = document.querySelectorAll('.user-dropdown');
+                dropdowns.forEach(dropdown => dropdown.classList.remove('active'));
+            }
+        });
     }
 
     async handleServerJoin() {
