@@ -1,6 +1,6 @@
 // script.js
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize mobile menu
+    // Инициализация мобильного меню
     const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
     if (mobileMenuBtn) {
         mobileMenuBtn.addEventListener('click', function() {
@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Close mobile menu when clicking a link
+    // Закрытие мобильного меню при клике на ссылку
     const navLinks = document.querySelectorAll('nav a');
     navLinks.forEach(link => {
         link.addEventListener('click', function() {
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Make scroll functions globally available
+    // Функция прокрутки к разделу серверов
     window.scrollToServers = function() {
         const el = document.getElementById('servers-section');
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
