@@ -126,7 +126,7 @@ class AuthManager {
                       <div class="user-info" tabindex="0">
                           <div class="user-avatar" title="${name}">
                               ${avatarUrl ? 
-                                  `<img src="${avatarUrl}" alt="${name}" style="width:100%;height:100%;border-radius:50%;">` : 
+                                  `<img src="${avatarUrl}" alt="${name}">` : 
                                   name[0]
                               }
                           </div>
