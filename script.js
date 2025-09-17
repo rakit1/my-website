@@ -1,3 +1,4 @@
+// script.js
 function scrollToServers() {
   const el = document.getElementById('servers-section');
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
