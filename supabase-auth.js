@@ -8,7 +8,6 @@ class AuthManager {
     }
 
     async init() {
-        // Ждем загрузки Supabase
         if (typeof window.supabase === 'undefined') {
             console.error("Supabase не загружен!");
             return;
@@ -18,8 +17,6 @@ class AuthManager {
             this.supabase = window.supabase.createClient(this.SUPABASE_URL, this.SUPABASE_ANON_KEY);
             this.setupEventListeners();
             await this.checkAuth();
-            
-            // Слушаем изменения статуса авторизации
             this.supabase.auth.onAuthStateChange((event, session) => {
                 console.log('Auth state changed:', event);
                 this.updateUI();
@@ -30,18 +27,17 @@ class AuthManager {
     }
 
     setupEventListeners() {
-        // Discord login
         this.on('#discordSignIn', 'click', (e) => {
             e.preventDefault();
             this.signInWithDiscord();
         });
 
-        // User section clicks
+        // Новый обработчик выхода через dropdown
         this.on('#userSection', 'click', (e) => {
             if (e.target.closest('.login-btn')) {
                 this.showModal('#authPage');
             }
-            if (e.target.closest('.user-avatar')) {
+            if (e.target.classList.contains('user-dropdown-btn')) {
                 this.signOut();
             }
         });
@@ -50,7 +46,6 @@ class AuthManager {
         this.on('.close-auth', 'click', () => this.hideModal('#authPage'));
         this.on('.close-ip-modal', 'click', () => this.hideModal('#ipModal'));
 
-        // Close modals by clicking outside
         this.on('#authPage', 'click', (e) => {
             if (e.target === e.currentTarget) this.hideModal('#authPage');
         });
@@ -58,14 +53,10 @@ class AuthManager {
             if (e.target === e.currentTarget) this.hideModal('#ipModal');
         });
 
-        // Server join buttons
         this.on('.server-join-btn', 'click', () => this.handleServerJoin());
-
-        // IP copy buttons
         this.on('.ip-btn', 'click', (e) => this.copyIP(e.currentTarget));
     }
 
-    // Вспомогательная функция для обработчиков событий
     on(selector, event, handler) {
         document.querySelectorAll(selector).forEach(element => {
             element.addEventListener(event, handler);
@@ -82,32 +73,29 @@ class AuthManager {
         if (modal) modal.style.display = 'none';
     }
 
-async signInWithDiscord() {
-    try {
-        console.log('Начало авторизации через Discord...');
-        
-        // ИСПРАВЛЕННЫЙ КОД - правильный redirectTo
-        const { data, error } = await this.supabase.auth.signInWithOAuth({
-            provider: 'discord',
-            options: { 
-                redirectTo: 'https://rakit1.github.io/my-website/', // ПРАВИЛЬНЫЙ URL
-                scopes: 'identify email'
+    async signInWithDiscord() {
+        try {
+            console.log('Начало авторизации через Discord...');
+            const { data, error } = await this.supabase.auth.signInWithOAuth({
+                provider: 'discord',
+                options: { 
+                    redirectTo: 'https://rakit1.github.io/my-website/',
+                    scopes: 'identify email'
+                }
+            });
+
+            if (error) {
+                console.error('Ошибка OAuth:', error);
+                alert('Ошибка при входе через Discord: ' + error.message);
+                return;
             }
-        });
+            console.log('OAuth данные:', data);
 
-        if (error) {
-            console.error('Ошибка OAuth:', error);
-            alert('Ошибка при входе через Discord: ' + error.message);
-            return;
+        } catch (error) {
+            console.error('Ошибка авторизации:', error);
+            alert('Произошла ошибка при авторизации');
         }
-
-        console.log('OAuth данные:', data);
-
-    } catch (error) {
-        console.error('Ошибка авторизации:', error);
-        alert('Произошла ошибка при авторизации');
     }
-}
 
     async signOut() {
         if (confirm('Выйти из аккаунта?')) {
@@ -127,7 +115,6 @@ async signInWithDiscord() {
     async checkAuth() {
         try {
             const { data: { session }, error } = await this.supabase.auth.getSession();
-            
             if (error) {
                 console.error('Ошибка проверки сессии:', error);
                 return;
@@ -166,9 +153,9 @@ async signInWithDiscord() {
                             'User';
                 
                 const avatarUrl = user.user_metadata?.avatar_url;
-                
+
                 userSection.innerHTML = `
-                    <div class="user-info">
+                    <div class="user-info" tabindex="0">
                         <div class="user-avatar" title="${name}">
                             ${avatarUrl ? 
                                 `<img src="${avatarUrl}" alt="${name}" style="width:100%;height:100%;border-radius:50%;">` : 
@@ -176,6 +163,9 @@ async signInWithDiscord() {
                             }
                         </div>
                         <span>${name}</span>
+                        <div class="user-dropdown">
+                            <button class="user-dropdown-btn" type="button">Выйти</button>
+                        </div>
                     </div>
                 `;
             } else {
@@ -210,22 +200,14 @@ async signInWithDiscord() {
 
     async copyIP(button) {
         const ip = button.getAttribute('data-ip');
-        
         try {
             await navigator.clipboard.writeText(ip);
-            
-            // Визуальная обратная связь
             button.classList.add('copied');
-            
-            // Восстанавливаем через 1.2 секунды
             setTimeout(() => {
                 button.classList.remove('copied');
             }, 1200);
-            
         } catch (error) {
             console.error('Ошибка копирования:', error);
-            
-            // Fallback для старых браузеров
             try {
                 const textArea = document.createElement('textarea');
                 textArea.value = ip;
@@ -233,10 +215,8 @@ async signInWithDiscord() {
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                
                 button.classList.add('copied');
                 setTimeout(() => button.classList.remove('copied'), 1200);
-                
             } catch (fallbackError) {
                 alert('Не удалось скопировать IP. Скопируйте вручную: ' + ip);
             }
@@ -244,13 +224,10 @@ async signInWithDiscord() {
     }
 }
 
-// Автоматическая инициализация при загрузке
 document.addEventListener('DOMContentLoaded', function() {
-    // Ждем загрузки Supabase
     if (typeof window.supabase !== 'undefined') {
         new AuthManager();
     } else {
-        // Если Supabase еще не загружен, ждем его
         const checkSupabase = setInterval(() => {
             if (typeof window.supabase !== 'undefined') {
                 clearInterval(checkSupabase);
@@ -260,7 +237,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Глобальные функции для кнопок
 window.scrollToServers = function() {
     const el = document.getElementById('servers-section');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
