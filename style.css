@@ -110,9 +110,9 @@ nav a.active::after {
   background: rgba(20, 20, 25, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
-  width: 120px;
-  padding: 8px 0;
-  margin-top: 8px;
+  width: 100px; /* Уменьшил с 120px до 100px */
+  padding: 6px 0; /* Уменьшил с 8px до 6px */
+  margin-top: 6px; /* Уменьшил с 8px до 6px */
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   opacity: 0;
   visibility: hidden;
@@ -134,8 +134,8 @@ nav a.active::after {
   background: none;
   border: none;
   color: var(--muted);
-  font-size: 0.9rem;
-  padding: 8px 15px;
+  font-size: 0.85rem; /* Уменьшил с 0.9rem до 0.85rem */
+  padding: 6px 12px; /* Уменьшил с 8px 15px до 6px 12px */
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -741,6 +741,12 @@ footer {
 
   /* Мобильная версия выпадающего меню */
   .dropdown-menu {
-    right: -20px;
+    right: -10px; /* Уменьшил отступ с -20px до -10px */
+    width: 90px; /* Ещё меньше для мобильных */
+  }
+  
+  .logout-btn {
+    font-size: 0.8rem;
+    padding: 5px 10px;
   }
 }
