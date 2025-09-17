@@ -1,8 +1,5 @@
-// supabase-auth.js — надёжный менеджер авторизации Supabase (v2)
-// Основные отличия:
-// - не вызывает несуществующие методы напрямую
-// - пытается установить сессию из хеша (если токены вернулись в URL)
-// - даёт понятные логи для отладки редиректа / redirect URI
+// supabase-auth.js
+// Обновлённый менеджер авторизации: парсит хеш с access_token и вызывает setSession если нужно.
 
 class AuthManager {
   constructor() {
@@ -19,71 +16,75 @@ class AuthManager {
     }
 
     try {
+      // Включаем detectSessionInUrl и persistSession
       this.supabase = window.supabase.createClient(this.SUPABASE_URL, this.SUPABASE_ANON_KEY, {
         auth: { detectSessionInUrl: true, persistSession: true }
       });
 
-      // Подпишемся на изменения сразу
-      this.supabase.auth.onAuthStateChange((event, session) => {
-        console.log('Auth state changed:', event, session);
-        this.updateUI();
-      });
+      // Подписка на изменения статуса (логируем)
+      if (this.supabase.auth && typeof this.supabase.auth.onAuthStateChange === 'function') {
+        this.supabase.auth.onAuthStateChange((event, session) => {
+          console.log('Auth state changed:', event, session);
+          this.updateUI();
+        });
+      }
 
       this.setupEventListeners();
 
-      // Попробуем корректно обработать OAuth-редирект:
-      // 1) если SDK имеет getSessionFromUrl -> используем
-      // 2) иначе, если в хеше есть access_token -> распарсим и вызовем setSession
-      // 3) если в query есть code -> логируем (обычно SDK сам обменяет код, если detectSessionInUrl работает)
+      // Если URL содержит хеш/код — пытаемся восстановить сессию
       const hash = window.location.hash || '';
       const search = window.location.search || '';
-      const looksLikeOAuthHash = hash.includes('access_token') || hash.includes('refresh_token');
-      const looksLikeOAuthCode = search.includes('code');
+      const hasHashTokens = hash.includes('access_token') || hash.includes('refresh_token');
+      const hasCode = search.includes('code');
 
-      if (looksLikeOAuthHash || looksLikeOAuthCode) {
+      if (hasHashTokens || hasCode) {
         console.log('Похоже на OAuth-редирект — пытаемся восстановить сессию...');
-        // Если SDK содержит getSessionFromUrl, вызываем его безопасно
+        // 1) Если есть getSessionFromUrl -> попробуем его
         if (this.supabase.auth && typeof this.supabase.auth.getSessionFromUrl === 'function') {
           try {
-            await this.supabase.auth.getSessionFromUrl({ storeSession: true }).catch(err => {
-              console.warn('getSessionFromUrl warning:', err);
+            await this.supabase.auth.getSessionFromUrl({ storeSession: true }).catch(e => {
+              console.warn('getSessionFromUrl warning:', e);
             });
-          } catch (err) {
-            console.warn('getSessionFromUrl failed:', err);
-          }
-        } else {
-          // Если метод отсутствует, проверим хеш: access_token & refresh_token
-          if (looksLikeOAuthHash) {
-            try {
-              const params = this._parseHash(window.location.hash);
-              if (params.access_token) {
-                // Попытка установить сессию вручную
-                if (this.supabase.auth && typeof this.supabase.auth.setSession === 'function') {
-                  await this.supabase.auth.setSession({
-                    access_token: params.access_token,
-                    refresh_token: params.refresh_token || null
-                  });
-                  console.log('Сессия установлена вручную из хеша.');
-                } else {
-                  console.warn('supabase.auth.setSession не доступен в SDK — проверьте версию supabase-js.');
-                }
-              } else {
-                console.log('В хеше нет access_token; возможно используется код авторизации (code).');
-              }
-            } catch (err) {
-              console.warn('Ошибка при попытке установить сессию из хеша:', err);
-            }
-          } else if (looksLikeOAuthCode) {
-            console.log('URL содержит ?code= — SDK обычно должен обменять код автоматически (если detectSessionInUrl=true). Если сессия не появилась, проверьте redirect URI в Supabase и Discord.');
+            console.log('getSessionFromUrl выполнен (если поддерживается).');
+          } catch (e) {
+            console.warn('getSessionFromUrl failed:', e);
           }
         }
 
-        // Очистим хеш/query чтобы не обрабатывать повторно
+        // 2) Если в хеше есть access_token и setSession доступен — установим сессию вручную
+        if (hasHashTokens) {
+          const params = this._parseHash(window.location.hash);
+          if (params.access_token) {
+            if (this.supabase.auth && typeof this.supabase.auth.setSession === 'function') {
+              try {
+                const result = await this.supabase.auth.setSession({
+                  access_token: params.access_token,
+                  refresh_token: params.refresh_token || null
+                });
+                if (result?.error) {
+                  console.warn('setSession returned error:', result.error);
+                } else {
+                  console.log('Сессия установлена через setSession.');
+                }
+              } catch (err) {
+                console.warn('Ошибка при setSession:', err);
+              }
+            } else {
+              console.warn('supabase.auth.setSession не доступен в SDK — обновите версию supabase-js до v2.x');
+            }
+          } else {
+            console.log('В хеше нет access_token — возможно вернулся только code.');
+          }
+        } else if (hasCode) {
+          console.log('В URL есть ?code= — SDK обычно обменяет код на сессию автоматически при detectSessionInUrl=true. Если сессия не появилась — проверьте redirect URI в Supabase/Discord и версию SDK.');
+        }
+
+        // Убираем параметры из URL чтобы не оставлять токен в адресной строке
         try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) {}
       }
 
-      // Некоторая задержка/повтор для уверенности, что SDK успел сохранить сессию
-      await this._waitForSession(3, 400);
+      // Подождём небольшую паузу и проверим сессию (несколько попыток)
+      await this._waitForSession(4, 300);
 
       await this.checkAuth();
     } catch (error) {
@@ -92,7 +93,7 @@ class AuthManager {
   }
 
   setupEventListeners() {
-    // Вход через Discord (делегирование)
+    // Кнопка Discord входа
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('#discordSignIn');
       if (btn) {
@@ -101,7 +102,7 @@ class AuthManager {
       }
     });
 
-    // Показ модалки входа при клике на кнопку "Войти" в header
+    // Показать модалку при клике на "Войти" в header
     document.addEventListener('click', (e) => {
       const loginBtn = e.target.closest('#userSection .login-btn');
       if (loginBtn) this.showModal('#authPage');
@@ -111,12 +112,11 @@ class AuthManager {
     document.addEventListener('click', (e) => {
       if (e.target.closest('.close-auth')) this.hideModal('#authPage');
       if (e.target.closest('.close-ip-modal')) this.hideModal('#ipModal');
-      // клики по подложке
       if (e.target === document.querySelector('#authPage')) this.hideModal('#authPage');
       if (e.target === document.querySelector('#ipModal')) this.hideModal('#ipModal');
     });
 
-    // Кнопки Сервер -> Присоединиться и IP-кнопки (делегирование)
+    // Делегированные клики для server-join и ip buttons
     document.addEventListener('click', (e) => {
       const join = e.target.closest('.server-join-btn');
       if (join) {
@@ -128,7 +128,7 @@ class AuthManager {
       if (ipBtn) this.copyIP(ipBtn);
     });
 
-    // Enter/Space on ip-btn for accessibility
+    // Enter/Space для ip-btn
     document.addEventListener('keydown', (e) => {
       if ((e.key === 'Enter' || e.key === ' ') && document.activeElement && document.activeElement.classList.contains('ip-btn')) {
         e.preventDefault();
@@ -150,15 +150,20 @@ class AuthManager {
   async signInWithDiscord() {
     try {
       console.log('Начало авторизации через Discord...');
-      // redirectTo должен точно совпадать с тем, что зарегистрировано в Supabase и Discord
-      const redirectTo = window.location.origin + window.location.pathname;
-      await this.supabase.auth.signInWithOAuth({
+      const redirectTo = window.location.origin + window.location.pathname; // измените явно если нужно
+      const { data, error } = await this.supabase.auth.signInWithOAuth({
         provider: 'discord',
         options: { redirectTo, scopes: 'identify email' }
       });
-      // Пользователь будет перенаправлен — дальнейшая обработка при редиректе
+      if (error) {
+        console.error('Ошибка OAuth:', error);
+        alert('Ошибка при входе через Discord: ' + (error.message || error));
+        return;
+      }
+      console.log('signInWithOAuth стартован:', data);
+      // Далее пользователь будет редиректнут на Discord
     } catch (err) {
-      console.error('Ошибка signInWithOAuth:', err);
+      console.error('Ошибка signInWithDiscord:', err);
       alert('Ошибка при попытке войти через Discord');
     }
   }
@@ -184,13 +189,13 @@ class AuthManager {
       if (res?.error) console.warn('getSession error:', res.error);
       if (session) {
         console.log('Сессия найдена:', session.user);
-        this.updateUI();
+        await this.updateUI();
       } else {
         console.log('Активная сессия не найдена');
-        this.updateUI();
+        await this.updateUI();
       }
     } catch (err) {
-      console.error('Ошибка проверки авторизации:', err);
+      console.error('Ошибка проверки сессии:', err);
     }
   }
 
@@ -213,7 +218,7 @@ class AuthManager {
       const avatarUrl = user.user_metadata?.avatar_url;
       userSection.innerHTML = `
         <div class="user-dropdown">
-          <div class="user-info" tabindex="0">
+          <div class="user-info" tabindex="0" aria-haspopup="true">
             <div class="user-avatar" title="${name}">
               ${avatarUrl ? `<img src="${avatarUrl}" alt="${name}">` : name[0].toUpperCase()}
             </div>
@@ -222,10 +227,11 @@ class AuthManager {
           <div class="dropdown-menu">
             <div class="dropdown-item" id="signOutBtn">Выйти</div>
           </div>
-        </div>`;
+        </div>
+      `;
       document.getElementById('signOutBtn')?.addEventListener('click', () => this.signOut());
     } catch (err) {
-      console.error('Ошибка обновления UI:', err);
+      console.error('Ошибка updateUI:', err);
       userSection.innerHTML = '<button class="login-btn">Войти</button>';
     }
   }
@@ -242,7 +248,7 @@ class AuthManager {
       if (user) this.showModal('#ipModal');
       else this.showModal('#authPage');
     } catch (err) {
-      console.error('Ошибка обработки кнопки сервера:', err);
+      console.error('Ошибка handleServerJoin:', err);
       this.showModal('#authPage');
     }
   }
@@ -271,9 +277,7 @@ class AuthManager {
     }
   }
 
-  // Вспомогательные методы
   _parseHash(hash) {
-    // hash: '#access_token=...&refresh_token=...&...'
     const cleaned = hash.charAt(0) === '#' ? hash.slice(1) : hash;
     const parts = cleaned.split('&');
     const obj = {};
@@ -294,14 +298,13 @@ class AuthManager {
   }
 }
 
-// Инициализация
 window.authManager = null;
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof window.supabase !== 'undefined') window.authManager = new AuthManager();
   else {
-    const interval = setInterval(() => {
+    const check = setInterval(() => {
       if (typeof window.supabase !== 'undefined') {
-        clearInterval(interval);
+        clearInterval(check);
         window.authManager = new AuthManager();
       }
     }, 150);
