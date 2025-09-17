@@ -312,6 +312,7 @@ nav a.active::after {
   border: 1px solid rgba(255, 255, 255, 0.03);
   transition: all 0.3s ease;
   max-width: 400px;
+  margin: 0 auto;
 }
 
 .server-card:hover {
@@ -401,6 +402,11 @@ nav a.active::after {
   margin-bottom: 30px;
   font-weight: 700;
   color: var(--text);
+}
+
+.auth-description {
+  color: var(--muted);
+  margin-bottom: 18px;
 }
 
 .close-auth {
