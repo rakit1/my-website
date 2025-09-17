@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>MyProject — Главная</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MyProject — Главная</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -25,6 +25,7 @@
   </nav>
 
   <div id="userSection">
+    <!-- сюда рендерится авторизация/drodown через JS -->
     <button class="login-btn">Войти</button>
   </div>
 
@@ -41,17 +42,15 @@
       <div class="hero-text">
         <h1>Уникальные игровые серверы</h1>
         <p>Здесь вы найдёте новые возможности, дружеское комьюнити и стабильный сервер без доната и приватов.</p>
-
         <div class="online-realtime">
           <div class="online-dot"></div>
           <span class="online-text">Онлайн: <span class="online-number">20</span> игроков</span>
         </div>
-
         <div class="hero-actions">
           <button class="btn btn-primary" onclick="scrollToServers()">Наши сервера</button>
           <a href="https://discord.com" class="btn btn-discord" target="_blank" rel="noopener noreferrer" aria-label="Discord">
             <svg class="discord-icon" viewBox="0 0 40 40" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path fill="#5865F2" d="M33.7 6.7A31.1 31.1 0 0 0 25.1 4a.5.5 0 0 0-.5.3c-.6 1-1.3 2.3-1.8 3.3-5.1-.8-10.2-.8-15.1 0-.5-1-.9-2.3-1.8-3.3A.5.5 0 0 0 5 4 31.1 31.1 0 0 0-3.6 6.7.4.4 0 0 0-[...]
+              <path fill="#5865F2" d="M33.7 6.7A31.1..."/>
               <ellipse cx="13.5" cy="18.7" rx="2.2" ry="2.2" fill="#fff"/>
               <ellipse cx="26.5" cy="18.7" rx="2.2" ry="2.2" fill="#fff"/>
             </svg>
@@ -59,7 +58,6 @@
           </a>
         </div>
       </div>
-
       <div class="hero-media">
         <div class="media-frame">
           <img src="5opka.png" alt="Игровой баннер">
@@ -69,20 +67,17 @@
     
     <section class="features">
       <h2 class="section-title">Наши преимущества</h2>
-      
       <div class="features-grid">
         <div class="feature-card">
           <div class="feature-icon">🚀</div>
           <h3>Высокая производительность</h3>
           <p>Мощное железо обеспечивает стабильную работу без лагов и задержек даже при полной загрузке сервера.</p>
         </div>
-        
         <div class="feature-card">
           <div class="feature-icon">🛡️</div>
           <h3>Честный геймплей</h3>
           <p>Никакого платного преимущества. Все игроки в равных условиях, без доната влияющего на баланс.</p>
         </div>
-        
         <div class="feature-card">
           <div class="feature-icon">👥</div>
           <h3>Активное сообщество</h3>
@@ -93,7 +88,6 @@
     
     <section class="servers" id="servers-section">
       <h2 class="section-title">Наши сервера</h2>
-      
       <div class="server-cards">
         <div class="server-card">
           <div class="server-header">
@@ -106,7 +100,6 @@
       </div>
     </section>
   </div>
-
   <footer>
     © 2025 MyProject. Все права защищены.
   </footer>
@@ -120,7 +113,7 @@
     <p style="color:var(--muted); margin-bottom:18px;">Вход доступен только через Discord — безопасно и быстро.</p>
     <button id="discordSignIn" class="btn-discord" aria-label="Войти через Discord" style="margin:0 auto;">
       <svg class="discord-icon" viewBox="0 0 40 40" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path fill="#5865F2" d="M33.7 6.7A31.1 31.1 0 0 0 25.1 4a.5.5 0 0 0-.5.3c-.6 1-1.3 2.3-1.8 3.3-5.1-.8-10.2-.8-15.1 0-.5-1-.9-2.3-1.8-3.3A.5.5 0 0 0 5 4 31.1 31.1 0 0 0-3.6 6.7.4.4 0 0 0-4 7.2c[...]
+        <path fill="#5865F2" d="M33.7 6.7A31.1..."/>
         <ellipse cx="13.5" cy="18.7" rx="2.2" ry="2.2" fill="#fff"/>
         <ellipse cx="26.5" cy="18.7" rx="2.2" ry="2.2" fill="#fff"/>
       </svg>
@@ -128,7 +121,6 @@
     </button>
   </div>
 </div>
-
 <div id="ipModal" class="ip-modal">
   <div class="ip-modal-content">
     <button class="close-ip-modal" aria-label="Закрыть">&times;</button>
@@ -153,7 +145,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-auth.js"></script>
+<script src="auth.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
