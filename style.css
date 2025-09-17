@@ -71,26 +71,27 @@ nav a.active::after {
   border-radius: 2px;
 }
 
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
+/* УДАЛЯЕМ старые стили .user-info и .user-avatar */
+/*.user-info {*/
+/*  display: flex;*/
+/*  align-items: center;*/
+/*  gap: 10px;*/
+/*  color: var(--muted);*/
+/*  font-size: 0.9rem;*/
+/*}*/
 
-.user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(45deg, var(--primary), #8a2be2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  color: white;
-  cursor: pointer;
-}
+/*.user-avatar {*/
+/*  width: 32px;*/
+/*  height: 32px;*/
+/*  border-radius: 50%;*/
+/*  background: linear-gradient(45deg, var(--primary), #8a2be2);*/
+/*  display: flex;*/
+/*  align-items: center;*/
+/*  justify-content: center;*/
+/*  font-weight: 600;*/
+/*  color: white;*/
+/*  cursor: pointer;*/
+/*}*/
 
 .login-btn {
   background: linear-gradient(180deg, var(--primary), var(--primary-strong));
@@ -554,131 +555,7 @@ footer {
   transition: all 0.3s ease;
 }
 
-/* Responsive design */
-@media (max-width: 1000px) {
-  .hero {
-    flex-direction: column-reverse;
-    gap: 24px;
-  }
-  
-  .hero-text {
-    width: 100%;
-    text-align: center;
-  }
-  
-  .hero-media {
-    width: 88%;
-  }
-  
-  .hero h1 {
-    font-size: 2.4rem;
-  }
-  
-  .hero p {
-    margin-left: auto;
-    margin-right: auto;
-  }
-}
-
-@media (max-width: 768px) {
-  .features-grid,
-  .server-cards {
-    grid-template-columns: 1fr;
-  }
-  
-  .section-title {
-    font-size: 1.8rem;
-    margin-bottom: 40px;
-  }
-  
-  .auth-box {
-    padding: 30px 20px;
-  }
-  
-  .ip-modal-content {
-    padding: 25px 20px;
-  }
-}
-
-@media (max-width: 520px) {
-  .wrap {
-    padding: 0 16px;
-  }
-  
-  .hero h1 {
-    font-size: 1.9rem;
-  }
-  
-  header {
-    padding: 16px 20px;
-  }
-  
-  .user-info {
-    font-size: 0.8rem;
-  }
-  
-  .user-avatar {
-    width: 28px;
-    height: 28px;
-    font-size: 0.8rem;
-  }
-  
-  nav {
-    position: fixed;
-    top: 70px;
-    left: 0;
-    width: 100%;
-    background: var(--bg);
-    flex-direction: column;
-    padding: 20px;
-    gap: 15px;
-    transform: translateY(-100%);
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    z-index: 99;
-  }
-  
-  nav.active {
-    transform: translateY(0);
-    opacity: 1;
-    visibility: visible;
-  }
-  
-  .mobile-menu-btn {
-    display: flex;
-  }
-  
-  .login-btn {
-    font-size: 0.85rem;
-    padding: 6px 12px;
-  }
-  
-  .hero-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .btn-discord {
-    justify-content: center;
-  }
-  
-  nav a.active::after {
-    bottom: -3px;
-  }
-  
-  .auth-title {
-    font-size: 1.5rem;
-  }
-  
-  .ip-modal-title {
-    font-size: 1.3rem;
-  }
-  
-  .server-join-btn {
-    padding: 14px;
-  }
+/* 🔽🔽🔽 НОВЫЕ СТИЛИ ДЛЯ ВЫПАДАЮЩЕГО МЕНЮ (ДОБАВЛЯЕМ ЗДЕСЬ) 🔽🔽🔽 */
 
 /* Стили для выпадающего меню пользователя */
 .user-dropdown {
@@ -768,8 +645,67 @@ footer {
   height: 16px;
 }
 
-/* Адаптивность для мобильных */
+/* 🔼🔼🔼 КОНЕЦ НОВЫХ СТИЛЕЙ 🔼🔼🔼 */
+
+/* Responsive design */
+@media (max-width: 1000px) {
+  .hero {
+    flex-direction: column-reverse;
+    gap: 24px;
+  }
+  
+  .hero-text {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .hero-media {
+    width: 88%;
+  }
+  
+  .hero h1 {
+    font-size: 2.4rem;
+  }
+  
+  .hero p {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .features-grid,
+  .server-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .section-title {
+    font-size: 1.8rem;
+    margin-bottom: 40px;
+  }
+  
+  .auth-box {
+    padding: 30px 20px;
+  }
+  
+  .ip-modal-content {
+    padding: 25px 20px;
+  }
+}
+
 @media (max-width: 520px) {
+  .wrap {
+    padding: 0 16px;
+  }
+  
+  .hero h1 {
+    font-size: 1.9rem;
+  }
+  
+  header {
+    padding: 16px 20px;
+  }
+  
   .user-info {
     font-size: 0.8rem;
     padding: 6px 10px;
@@ -784,8 +720,52 @@ footer {
     right: -10px;
     min-width: 140px;
   }
-
-  /* ВАШ СУЩЕСТВУЮЩИЙ КОД ДЛЯ МОБИЛЬНОЙ ВЕРСИИ */
+  
+  nav {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    width: 100%;
+    background: var(--bg);
+    flex-direction: column;
+    padding: 20px;
+    gap: 15px;
+    transform: translateY(-100%);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 99;
+  }
+  
+  nav.active {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+  }
+  
+  .mobile-menu-btn {
+    display: flex;
+  }
+  
+  .login-btn {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+  }
+  
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .btn-discord {
+    justify-content: center;
+  }
+  
+  nav a.active::after {
+    bottom: -3px;
+  }
+  
   .auth-title {
     font-size: 1.5rem;
   }
