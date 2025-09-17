@@ -93,12 +93,14 @@ nav a.active::after {
   overflow: hidden;
 }
 
-/* --- ИЗМЕНЕНИЯ: компактное dropdown меню --- */
+/* --- ИЗМЕНЕНИЯ: компактное dropdown меню, по центру под ником --- */
 .user-dropdown {
   display: none;
   position: absolute;
   top: 120%;
-  right: 0;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
   background: rgba(25, 25, 35, 0.98);
   border: 1px solid rgba(255,255,255,0.09);
   border-radius: 8px;
@@ -116,6 +118,7 @@ nav a.active::after {
   to { opacity: 1; transform: translateY(0);}
 }
 
+/* Открытие по наведению — для всей области user-info и dropdown */
 .user-info:hover .user-dropdown,
 .user-info:focus-within .user-dropdown {
   display: block;
