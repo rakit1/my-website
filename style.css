@@ -101,27 +101,37 @@ nav a.active::after {
 .user-name {
   color: var(--text);
   font-weight: 500;
+  position: relative;
+}
+
+.user-name::after {
+  content: '▼';
+  font-size: 0.6rem;
+  margin-left: 4px;
+  opacity: 0.7;
+  position: relative;
+  top: -1px;
 }
 
 .dropdown-menu {
   position: absolute;
   top: 100%;
   right: 0;
-  background: rgba(20, 20, 25, 0.95);
+  background: rgba(15, 15, 20, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  width: 100px; /* Уменьшил с 120px до 100px */
-  padding: 6px 0; /* Уменьшил с 8px до 6px */
-  margin-top: 6px; /* Уменьшил с 8px до 6px */
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  width: 85px; /* Еще меньше */
+  padding: 4px 0; /* Уменьшил отступы */
+  margin-top: 5px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-10px);
+  transform: translateY(-8px);
   transition: all 0.2s ease;
   z-index: 10;
 }
 
-.user-dropdown:hover .dropdown-menu {
+.user-dropdown.active .dropdown-menu {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -130,12 +140,12 @@ nav a.active::after {
 .logout-btn {
   display: block;
   width: 100%;
-  text-align: left;
+  text-align: center; /* По центру */
   background: none;
   border: none;
   color: var(--muted);
-  font-size: 0.85rem; /* Уменьшил с 0.9rem до 0.85rem */
-  padding: 6px 12px; /* Уменьшил с 8px 15px до 6px 12px */
+  font-size: 0.8rem; /* Ещё меньше */
+  padding: 5px 8px; /* Уменьшенные отступы */
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -741,12 +751,12 @@ footer {
 
   /* Мобильная версия выпадающего меню */
   .dropdown-menu {
-    right: -10px; /* Уменьшил отступ с -20px до -10px */
-    width: 90px; /* Ещё меньше для мобильных */
+    right: -5px;
+    width: 80px;
   }
   
   .logout-btn {
-    font-size: 0.8rem;
-    padding: 5px 10px;
+    font-size: 0.75rem;
+    padding: 4px 8px;
   }
 }
