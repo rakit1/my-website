@@ -18,7 +18,6 @@ class AuthManager {
             this.setupEventListeners();
             await this.checkAuth();
             this.supabase.auth.onAuthStateChange((event, session) => {
-                console.log('Auth state changed:', event);
                 this.updateUI();
             });
         } catch (error) {
@@ -32,7 +31,7 @@ class AuthManager {
             this.signInWithDiscord();
         });
 
-        // Новый обработчик выхода через dropdown
+        // Выход через dropdown
         this.on('#userSection', 'click', (e) => {
             if (e.target.closest('.login-btn')) {
                 this.showModal('#authPage');
@@ -75,7 +74,6 @@ class AuthManager {
 
     async signInWithDiscord() {
         try {
-            console.log('Начало авторизации через Discord...');
             const { data, error } = await this.supabase.auth.signInWithOAuth({
                 provider: 'discord',
                 options: { 
@@ -83,52 +81,36 @@ class AuthManager {
                     scopes: 'identify email'
                 }
             });
-
             if (error) {
-                console.error('Ошибка OAuth:', error);
                 alert('Ошибка при входе через Discord: ' + error.message);
                 return;
             }
-            console.log('OAuth данные:', data);
-
         } catch (error) {
-            console.error('Ошибка авторизации:', error);
             alert('Произошла ошибка при авторизации');
         }
     }
 
+    // --- ИЗМЕНЕНИЕ: убрано confirm, выход мгновенный ---
     async signOut() {
-        if (confirm('Выйти из аккаунта?')) {
-            try {
-                const { error } = await this.supabase.auth.signOut();
-                if (error) throw error;
-                this.updateUI();
-                this.hideModal('#authPage');
-                this.hideModal('#ipModal');
-            } catch (error) {
-                console.error('Ошибка выхода:', error);
-                alert('Не удалось выйти из аккаунта');
-            }
+        try {
+            const { error } = await this.supabase.auth.signOut();
+            if (error) throw error;
+            this.updateUI();
+            this.hideModal('#authPage');
+            this.hideModal('#ipModal');
+        } catch (error) {
+            alert('Не удалось выйти из аккаунта');
         }
     }
+    // --- КОНЕЦ ИЗМЕНЕНИЯ ---
 
     async checkAuth() {
         try {
             const { data: { session }, error } = await this.supabase.auth.getSession();
-            if (error) {
-                console.error('Ошибка проверки сессии:', error);
-                return;
-            }
-
             if (session) {
-                console.log('Сессия найдена:', session.user);
                 this.updateUI();
-            } else {
-                console.log('Активная сессия не найдена');
             }
-        } catch (error) {
-            console.error('Ошибка проверки авторизации:', error);
-        }
+        } catch {}
     }
 
     async updateUI() {
@@ -137,23 +119,9 @@ class AuthManager {
 
         try {
             const { data: { user }, error } = await this.supabase.auth.getUser();
-            
-            if (error) {
-                console.error('Ошибка получения пользователя:', error);
-                userSection.innerHTML = '<button class="login-btn">Войти</button>';
-                return;
-            }
-
             if (user) {
-                console.log('Пользователь найден:', user);
-                
-                const name = user.user_metadata?.full_name || 
-                            user.user_metadata?.global_name || 
-                            user.email || 
-                            'User';
-                
+                const name = user.user_metadata?.full_name || user.user_metadata?.global_name || user.email || 'User';
                 const avatarUrl = user.user_metadata?.avatar_url;
-
                 userSection.innerHTML = `
                     <div class="user-info" tabindex="0">
                         <div class="user-avatar" title="${name}">
@@ -171,8 +139,7 @@ class AuthManager {
             } else {
                 userSection.innerHTML = '<button class="login-btn">Войти</button>';
             }
-        } catch (error) {
-            console.error('Ошибка обновления UI:', error);
+        } catch {
             userSection.innerHTML = '<button class="login-btn">Войти</button>';
         }
     }
@@ -180,20 +147,12 @@ class AuthManager {
     async handleServerJoin() {
         try {
             const { data: { user }, error } = await this.supabase.auth.getUser();
-            
-            if (error) {
-                console.error('Ошибка проверки пользователя:', error);
-                this.showModal('#authPage');
-                return;
-            }
-
             if (user) {
                 this.showModal('#ipModal');
             } else {
                 this.showModal('#authPage');
             }
-        } catch (error) {
-            console.error('Ошибка обработки кнопки сервера:', error);
+        } catch {
             this.showModal('#authPage');
         }
     }
@@ -206,8 +165,7 @@ class AuthManager {
             setTimeout(() => {
                 button.classList.remove('copied');
             }, 1200);
-        } catch (error) {
-            console.error('Ошибка копирования:', error);
+        } catch {
             try {
                 const textArea = document.createElement('textarea');
                 textArea.value = ip;
@@ -217,7 +175,7 @@ class AuthManager {
                 document.body.removeChild(textArea);
                 button.classList.add('copied');
                 setTimeout(() => button.classList.remove('copied'), 1200);
-            } catch (fallbackError) {
+            } catch {
                 alert('Не удалось скопировать IP. Скопируйте вручную: ' + ip);
             }
         }
