@@ -93,14 +93,14 @@ nav a.active::after {
   overflow: hidden;
 }
 
-/* --- ИЗМЕНЕНИЯ: dropdown правее, не закрывается при наведении на меню --- */
+/* --- ИЗМЕНЕНИЯ: dropdown левее и всегда доступно при ховере --- */
 .user-dropdown {
   display: none;
   position: absolute;
-  top: 110%; /* ближе к нику, без разрыва */
-  left: 70%;  /* ПРАВЕЕ */
-  right: auto;
-  transform: translateX(-10%); /* подгони точнее если надо */
+  top: 100%;
+  left: 60%;            /* левее, под ником */
+  transform: translateX(-40%);
+  margin-top: -4px;     /* склеиваем меню и ник */
   background: rgba(25, 25, 35, 0.98);
   border: 1px solid rgba(255,255,255,0.09);
   border-radius: 8px;
@@ -111,13 +111,12 @@ nav a.active::after {
   z-index: 99;
   padding: 0;
   animation: dropdown-fade 0.18s;
-  pointer-events: none; /* чтобы не было "мертвой зоны" */
+  /* pointer-events убран! */
 }
 
 .user-info:hover .user-dropdown,
 .user-info:focus-within .user-dropdown {
   display: block;
-  pointer-events: auto;
 }
 
 @keyframes dropdown-fade {
