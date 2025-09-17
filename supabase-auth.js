@@ -8,9 +8,9 @@ class AuthManager {
     }
 
     async init() {
-        // Wait for Supabase to load
+        // Ждем загрузки Supabase
         if (typeof window.supabase === 'undefined') {
-            console.error("Supabase is not loaded!");
+            console.error("Supabase не загружен!");
             return;
         }
 
@@ -19,13 +19,13 @@ class AuthManager {
             this.setupEventListeners();
             await this.checkAuth();
             
-            // Listen for auth state changes
+            // Слушаем изменения статуса авторизации
             this.supabase.auth.onAuthStateChange((event, session) => {
-                console.log('Auth state changed:', event);
+                console.log('Статус авторизации изменился:', event);
                 this.updateUI();
             });
         } catch (error) {
-            console.error('Error initializing Supabase:', error);
+            console.error('Ошибка инициализации Supabase:', error);
         }
     }
 
@@ -65,7 +65,7 @@ class AuthManager {
         this.on('.ip-btn', 'click', (e) => this.copyIP(e.currentTarget));
     }
 
-    // Helper function for event handlers
+    // Вспомогательная функция для обработчиков событий
     on(selector, event, handler) {
         document.querySelectorAll(selector).forEach(element => {
             element.addEventListener(event, handler);
@@ -84,36 +84,33 @@ class AuthManager {
 
     async signInWithDiscord() {
         try {
-            console.log('Starting Discord authentication...');
+            console.log('Начало авторизации через Discord...');
             
-            // Get the current URL for proper redirect
-            const currentUrl = window.location.href.split('?')[0]; // Remove any query params
-            const redirectUrl = currentUrl.endsWith('/') ? currentUrl : `${currentUrl}/`;
-            
+            // ВАЖНО! Используем правильный URL для редиректа
             const { data, error } = await this.supabase.auth.signInWithOAuth({
                 provider: 'discord',
                 options: { 
-                    redirectTo: redirectUrl,
+                    redirectTo: 'https://rakit1.github.io/my-website/',
                     scopes: 'identify email'
                 }
             });
 
             if (error) {
-                console.error('OAuth error:', error);
-                alert('Error signing in with Discord: ' + error.message);
+                console.error('Ошибка OAuth:', error);
+                alert('Ошибка при входе через Discord: ' + error.message);
                 return;
             }
 
-            console.log('OAuth data:', data);
+            console.log('OAuth данные:', data);
 
         } catch (error) {
-            console.error('Authentication error:', error);
-            alert('An error occurred during authentication');
+            console.error('Ошибка авторизации:', error);
+            alert('Произошла ошибка при авторизации');
         }
     }
 
     async signOut() {
-        if (confirm('Sign out of your account?')) {
+        if (confirm('Выйти из аккаунта?')) {
             try {
                 const { error } = await this.supabase.auth.signOut();
                 if (error) throw error;
@@ -121,8 +118,8 @@ class AuthManager {
                 this.hideModal('#authPage');
                 this.hideModal('#ipModal');
             } catch (error) {
-                console.error('Sign out error:', error);
-                alert('Could not sign out of account');
+                console.error('Ошибка выхода:', error);
+                alert('Не удалось выйти из аккаунта');
             }
         }
     }
@@ -132,18 +129,18 @@ class AuthManager {
             const { data: { session }, error } = await this.supabase.auth.getSession();
             
             if (error) {
-                console.error('Session check error:', error);
+                console.error('Ошибка проверки сессии:', error);
                 return;
             }
 
             if (session) {
-                console.log('Session found:', session.user);
+                console.log('Сессия найдена:', session.user);
                 this.updateUI();
             } else {
-                console.log('No active session found');
+                console.log('Активная сессия не найдена');
             }
         } catch (error) {
-            console.error('Auth check error:', error);
+            console.error('Ошибка проверки авторизации:', error);
         }
     }
 
@@ -155,13 +152,13 @@ class AuthManager {
             const { data: { user }, error } = await this.supabase.auth.getUser();
             
             if (error) {
-                console.error('Error getting user:', error);
-                userSection.innerHTML = '<button class="login-btn">Sign In</button>';
+                console.error('Ошибка получения пользователя:', error);
+                userSection.innerHTML = '<button class="login-btn">Войти</button>';
                 return;
             }
 
             if (user) {
-                console.log('User found:', user);
+                console.log('Пользователь найден:', user);
                 
                 const name = user.user_metadata?.full_name || 
                             user.user_metadata?.global_name || 
@@ -182,11 +179,11 @@ class AuthManager {
                     </div>
                 `;
             } else {
-                userSection.innerHTML = '<button class="login-btn">Sign In</button>';
+                userSection.innerHTML = '<button class="login-btn">Войти</button>';
             }
         } catch (error) {
-            console.error('UI update error:', error);
-            userSection.innerHTML = '<button class="login-btn">Sign In</button>';
+            console.error('Ошибка обновления UI:', error);
+            userSection.innerHTML = '<button class="login-btn">Войти</button>';
         }
     }
 
@@ -195,7 +192,7 @@ class AuthManager {
             const { data: { user }, error } = await this.supabase.auth.getUser();
             
             if (error) {
-                console.error('User check error:', error);
+                console.error('Ошибка проверки пользователя:', error);
                 this.showModal('#authPage');
                 return;
             }
@@ -206,7 +203,7 @@ class AuthManager {
                 this.showModal('#authPage');
             }
         } catch (error) {
-            console.error('Server button handling error:', error);
+            console.error('Ошибка обработки кнопки сервера:', error);
             this.showModal('#authPage');
         }
     }
@@ -217,18 +214,18 @@ class AuthManager {
         try {
             await navigator.clipboard.writeText(ip);
             
-            // Visual feedback
+            // Визуальная обратная связь
             button.classList.add('copied');
             
-            // Reset after 1.2 seconds
+            // Восстанавливаем через 1.2 секунды
             setTimeout(() => {
                 button.classList.remove('copied');
             }, 1200);
             
         } catch (error) {
-            console.error('Copy error:', error);
+            console.error('Ошибка копирования:', error);
             
-            // Fallback for older browsers
+            // Запасной вариант для старых браузеров
             try {
                 const textArea = document.createElement('textarea');
                 textArea.value = ip;
@@ -241,19 +238,19 @@ class AuthManager {
                 setTimeout(() => button.classList.remove('copied'), 1200);
                 
             } catch (fallbackError) {
-                alert('Could not copy IP. Copy manually: ' + ip);
+                alert('Не удалось скопировать IP. Скопируйте вручную: ' + ip);
             }
         }
     }
 }
 
-// Initialize when DOM is loaded
+// Инициализация при загрузке DOM
 document.addEventListener('DOMContentLoaded', function() {
-    // Check if Supabase is loaded
+    // Проверяем, загружен ли Supabase
     if (typeof window.supabase !== 'undefined') {
         new AuthManager();
     } else {
-        // If Supabase is not yet loaded, wait for it
+        // Если Supabase еще не загружен, ждем его
         const checkSupabase = setInterval(() => {
             if (typeof window.supabase !== 'undefined') {
                 clearInterval(checkSupabase);
@@ -263,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Global functions for buttons
+// Глобальные функции для кнопок
 window.scrollToServers = function() {
     const el = document.getElementById('servers-section');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
