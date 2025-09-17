@@ -82,32 +82,32 @@ class AuthManager {
         if (modal) modal.style.display = 'none';
     }
 
-async signInWithDiscord() {
-    try {
-        console.log('Начало авторизации через Discord...');
-        
-        // ИСПРАВЛЕННЫЙ КОД - правильный redirectTo
-        const { data, error } = await this.supabase.auth.signInWithOAuth({
-            provider: 'discord',
-            options: { 
-                redirectTo: 'https://rakit1.github.io/my-website/', // ПРАВИЛЬНЫЙ URL
-                scopes: 'identify email'
+    async signInWithDiscord() {
+        try {
+            console.log('Начало авторизации через Discord...');
+            
+            // ИСПРАВЛЕННЫЙ КОД - правильный redirectTo
+            const { data, error } = await this.supabase.auth.signInWithOAuth({
+                provider: 'discord',
+                options: { 
+                    redirectTo: 'https://rakit1.github.io/my-website/', // ПРАВИЛЬНЫЙ URL
+                    scopes: 'identify email'
+                }
+            });
+
+            if (error) {
+                console.error('Ошибка OAuth:', error);
+                alert('Ошибка при входе через Discord: ' + error.message);
+                return;
             }
-        });
 
-        if (error) {
-            console.error('Ошибка OAuth:', error);
-            alert('Ошибка при входе через Discord: ' + error.message);
-            return;
+            console.log('OAuth данные:', data);
+
+        } catch (error) {
+            console.error('Ошибка авторизации:', error);
+            alert('Произошла ошибка при авторизации');
         }
-
-        console.log('OAuth данные:', data);
-
-    } catch (error) {
-        console.error('Ошибка авторизации:', error);
-        alert('Произошла ошибка при авторизации');
     }
-}
 
     async signOut() {
         if (confirm('Выйти из аккаунта?')) {
@@ -144,6 +144,7 @@ async signInWithDiscord() {
         }
     }
 
+    // 🔽🔽🔽 ВСТАВЛЯЕМ НОВЫЙ МЕТОД updateUI() ЗДЕСЬ 🔽🔽🔽
     async updateUI() {
         const userSection = document.getElementById('userSection');
         if (!userSection) return;
@@ -167,15 +168,26 @@ async signInWithDiscord() {
                 
                 const avatarUrl = user.user_metadata?.avatar_url;
                 
+                // Новое выпадающее меню вместо простого аватара
                 userSection.innerHTML = `
-                    <div class="user-info">
-                        <div class="user-avatar" title="${name}">
-                            ${avatarUrl ? 
-                                `<img src="${avatarUrl}" alt="${name}" style="width:100%;height:100%;border-radius:50%;">` : 
-                                name[0]
-                            }
+                    <div class="user-dropdown">
+                        <div class="user-info">
+                            <div class="user-avatar" title="${name}">
+                                ${avatarUrl ? 
+                                    `<img src="${avatarUrl}" alt="${name}">` : 
+                                    name[0].toUpperCase()
+                                }
+                            </div>
+                            <span>${name}</span>
                         </div>
-                        <span>${name}</span>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-item" onclick="authManager.signOut()">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                                </svg>
+                                Выйти
+                            </div>
+                        </div>
                     </div>
                 `;
             } else {
@@ -244,17 +256,23 @@ async signInWithDiscord() {
     }
 }
 
-// Автоматическая инициализация при загрузке
+// 🔽🔽🔽 ВСТАВЛЯЕМ ЭТО В КОНЦЕ ФАЙЛА 🔽🔽🔽
+
+// Добавляем глобальную переменную для доступа к менеджеру авторизации
+let authManager;
+
+// В конце файла изменяем инициализацию:
 document.addEventListener('DOMContentLoaded', function() {
-    // Ждем загрузки Supabase
     if (typeof window.supabase !== 'undefined') {
-        new AuthManager();
+        authManager = new AuthManager();
+        window.authManager = authManager; // Делаем глобально доступным
     } else {
         // Если Supabase еще не загружен, ждем его
         const checkSupabase = setInterval(() => {
             if (typeof window.supabase !== 'undefined') {
                 clearInterval(checkSupabase);
-                new AuthManager();
+                authManager = new AuthManager();
+                window.authManager = authManager;
             }
         }, 100);
     }
