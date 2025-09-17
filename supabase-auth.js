@@ -214,13 +214,7 @@ class AuthManager {
             });
         }
 
-        // Закрытие меню при клике вне его
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.user-dropdown')) {
-                const dropdowns = document.querySelectorAll('.user-dropdown');
-                dropdowns.forEach(dropdown => dropdown.classList.remove('active'));
-            }
-        });
+        // Закрытие меню при клике вне его - УБРАН ДУБЛИРУЮЩИЙСЯ КОД
     }
 
     async handleServerJoin() {
@@ -301,3 +295,14 @@ window.scrollToServers = function() {
     const el = document.getElementById('servers-section');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
+
+// ОБЩИЙ обработчик для закрытия выпадающих меню при клике вне их
+document.addEventListener('click', function(e) {
+    // Закрываем все выпадающие меню пользователя
+    const dropdowns = document.querySelectorAll('.user-dropdown');
+    dropdowns.forEach(dropdown => {
+        if (!dropdown.contains(e.target)) {
+            dropdown.classList.remove('active');
+        }
+    });
+});
