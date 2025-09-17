@@ -2,7 +2,7 @@
 class AuthManager {
     constructor() {
         this.SUPABASE_URL = "https://egskxyxgzdidfbxhjaud.supabase.co";
-        this.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw";
+        this.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhbmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw";
         this.supabase = null;
         this.init();
     }
@@ -36,13 +36,20 @@ class AuthManager {
             this.signInWithDiscord();
         });
 
-        // User section clicks
+        // УДАЛЯЕМ старый обработчик для клика по аватару - он больше не нужен!
+        // this.on('#userSection', 'click', (e) => {
+        //     if (e.target.closest('.login-btn')) {
+        //         this.showModal('#authPage');
+        //     }
+        //     if (e.target.closest('.user-avatar')) {
+        //         this.signOut();
+        //     }
+        // });
+
+        // Новый обработчик только для кнопки входа
         this.on('#userSection', 'click', (e) => {
             if (e.target.closest('.login-btn')) {
                 this.showModal('#authPage');
-            }
-            if (e.target.closest('.user-avatar')) {
-                this.signOut();
             }
         });
 
@@ -86,11 +93,10 @@ class AuthManager {
         try {
             console.log('Начало авторизации через Discord...');
             
-            // ИСПРАВЛЕННЫЙ КОД - правильный redirectTo
             const { data, error } = await this.supabase.auth.signInWithOAuth({
                 provider: 'discord',
                 options: { 
-                    redirectTo: 'https://rakit1.github.io/my-website/', // ПРАВИЛЬНЫЙ URL
+                    redirectTo: 'https://rakit1.github.io/my-website/',
                     scopes: 'identify email'
                 }
             });
@@ -144,7 +150,6 @@ class AuthManager {
         }
     }
 
-    // 🔽🔽🔽 ВСТАВЛЯЕМ НОВЫЙ МЕТОД updateUI() ЗДЕСЬ 🔽🔽🔽
     async updateUI() {
         const userSection = document.getElementById('userSection');
         if (!userSection) return;
@@ -168,7 +173,6 @@ class AuthManager {
                 
                 const avatarUrl = user.user_metadata?.avatar_url;
                 
-                // Новое выпадающее меню вместо простого аватара
                 userSection.innerHTML = `
                     <div class="user-dropdown">
                         <div class="user-info">
@@ -226,10 +230,8 @@ class AuthManager {
         try {
             await navigator.clipboard.writeText(ip);
             
-            // Визуальная обратная связь
             button.classList.add('copied');
             
-            // Восстанавливаем через 1.2 секунды
             setTimeout(() => {
                 button.classList.remove('copied');
             }, 1200);
@@ -237,7 +239,6 @@ class AuthManager {
         } catch (error) {
             console.error('Ошибка копирования:', error);
             
-            // Fallback для старых браузеров
             try {
                 const textArea = document.createElement('textarea');
                 textArea.value = ip;
@@ -256,18 +257,14 @@ class AuthManager {
     }
 }
 
-// 🔽🔽🔽 ВСТАВЛЯЕМ ЭТО В КОНЦЕ ФАЙЛА 🔽🔽🔽
-
-// Добавляем глобальную переменную для доступа к менеджеру авторизации
+// Глобальная переменная для доступа к менеджеру авторизации
 let authManager;
 
-// В конце файла изменяем инициализацию:
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof window.supabase !== 'undefined') {
         authManager = new AuthManager();
-        window.authManager = authManager; // Делаем глобально доступным
+        window.authManager = authManager;
     } else {
-        // Если Supabase еще не загружен, ждем его
         const checkSupabase = setInterval(() => {
             if (typeof window.supabase !== 'undefined') {
                 clearInterval(checkSupabase);
