@@ -123,17 +123,19 @@ class AuthManager {
                 const name = user.user_metadata?.full_name || user.user_metadata?.global_name || user.email || 'User';
                 const avatarUrl = user.user_metadata?.avatar_url;
                 userSection.innerHTML = `
-                    <div class="user-info" tabindex="0">
-                        <div class="user-avatar" title="${name}">
-                            ${avatarUrl ? 
-                                `<img src="${avatarUrl}" alt="${name}" style="width:100%;height:100%;border-radius:50%;">` : 
-                                name[0]
-                            }
-                        </div>
-                        <span>${name}</span>
-                        <div class="user-dropdown">
-                            <button class="user-dropdown-btn" type="button">Выйти</button>
-                        </div>
+                    <div class="user-info-wrap">
+                      <div class="user-info" tabindex="0">
+                          <div class="user-avatar" title="${name}">
+                              ${avatarUrl ? 
+                                  `<img src="${avatarUrl}" alt="${name}" style="width:100%;height:100%;border-radius:50%;">` : 
+                                  name[0]
+                              }
+                          </div>
+                          <span>${name}</span>
+                      </div>
+                      <div class="user-dropdown">
+                          <button class="user-dropdown-btn" type="button">Выйти</button>
+                      </div>
                     </div>
                 `;
             } else {
