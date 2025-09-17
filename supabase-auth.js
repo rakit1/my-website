@@ -36,15 +36,25 @@ class AuthManager {
             this.signInWithDiscord();
         });
 
-        // User section clicks для логина
-        this.on('#userSection', 'click', (e) => {
-            if (e.target.closest('.login-btn')) {
-                this.showModal('#authPage');
+        // Кнопка входа
+        this.on('.login-btn', 'click', () => {
+            this.showModal('#authPage');
+        });
+
+        // Клик по имени пользователя для открытия/закрытия меню
+        this.on('.user-name', 'click', (e) => {
+            const dropdown = e.target.closest('.user-dropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('active');
+                e.stopPropagation();
             }
-            
-            // Используем делегирование событий для кнопки выхода
-            if (e.target.closest('.logout-btn')) {
-                this.signOut();
+        });
+
+        // Закрытие меню при клике вне его
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.user-dropdown')) {
+                const dropdowns = document.querySelectorAll('.user-dropdown');
+                dropdowns.forEach(dropdown => dropdown.classList.remove('active'));
             }
         });
 
@@ -113,8 +123,10 @@ class AuthManager {
 
     async signOut() {
         try {
+            console.log('Выполняется выход...');
             const { error } = await this.supabase.auth.signOut();
             if (error) throw error;
+            console.log('Выход выполнен успешно');
             this.updateUI();
             this.hideModal('#authPage');
             this.hideModal('#ipModal');
@@ -184,6 +196,16 @@ class AuthManager {
                         </div>
                     </div>
                 `;
+                
+                // ПРЯМОЙ обработчик для кнопки выхода
+                const logoutBtn = userSection.querySelector('.logout-btn');
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', () => {
+                        console.log('Кнопка выхода нажата');
+                        this.signOut();
+                    });
+                }
+                
             } else {
                 userSection.innerHTML = '<button class="login-btn">Войти</button>';
             }
