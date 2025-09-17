@@ -8,9 +8,9 @@ class AuthManager {
     }
 
     async init() {
-        // Ждем загрузки Supabase
+        // Wait for Supabase to load
         if (typeof window.supabase === 'undefined') {
-            console.error("Supabase не загружен!");
+            console.error("Supabase is not loaded!");
             return;
         }
 
@@ -19,13 +19,13 @@ class AuthManager {
             this.setupEventListeners();
             await this.checkAuth();
             
-            // Слушаем изменения статуса авторизации
+            // Listen for auth state changes
             this.supabase.auth.onAuthStateChange((event, session) => {
                 console.log('Auth state changed:', event);
                 this.updateUI();
             });
         } catch (error) {
-            console.error('Ошибка инициализации Supabase:', error);
+            console.error('Error initializing Supabase:', error);
         }
     }
 
@@ -65,7 +65,7 @@ class AuthManager {
         this.on('.ip-btn', 'click', (e) => this.copyIP(e.currentTarget));
     }
 
-    // Вспомогательная функция для обработчиков событий
+    // Helper function for event handlers
     on(selector, event, handler) {
         document.querySelectorAll(selector).forEach(element => {
             element.addEventListener(event, handler);
@@ -82,35 +82,38 @@ class AuthManager {
         if (modal) modal.style.display = 'none';
     }
 
-async signInWithDiscord() {
-    try {
-        console.log('Начало авторизации через Discord...');
-        
-        // ИСПРАВЛЕННЫЙ КОД - правильный redirectTo
-        const { data, error } = await this.supabase.auth.signInWithOAuth({
-            provider: 'discord',
-            options: { 
-                redirectTo: 'https://rakit1.github.io/my-website/', // ПРАВИЛЬНЫЙ URL
-                scopes: 'identify email'
+    async signInWithDiscord() {
+        try {
+            console.log('Starting Discord authentication...');
+            
+            // Get the current URL for proper redirect
+            const currentUrl = window.location.href.split('?')[0]; // Remove any query params
+            const redirectUrl = currentUrl.endsWith('/') ? currentUrl : `${currentUrl}/`;
+            
+            const { data, error } = await this.supabase.auth.signInWithOAuth({
+                provider: 'discord',
+                options: { 
+                    redirectTo: redirectUrl,
+                    scopes: 'identify email'
+                }
+            });
+
+            if (error) {
+                console.error('OAuth error:', error);
+                alert('Error signing in with Discord: ' + error.message);
+                return;
             }
-        });
 
-        if (error) {
-            console.error('Ошибка OAuth:', error);
-            alert('Ошибка при входе через Discord: ' + error.message);
-            return;
+            console.log('OAuth data:', data);
+
+        } catch (error) {
+            console.error('Authentication error:', error);
+            alert('An error occurred during authentication');
         }
-
-        console.log('OAuth данные:', data);
-
-    } catch (error) {
-        console.error('Ошибка авторизации:', error);
-        alert('Произошла ошибка при авторизации');
     }
-}
 
     async signOut() {
-        if (confirm('Выйти из аккаунта?')) {
+        if (confirm('Sign out of your account?')) {
             try {
                 const { error } = await this.supabase.auth.signOut();
                 if (error) throw error;
@@ -118,8 +121,8 @@ async signInWithDiscord() {
                 this.hideModal('#authPage');
                 this.hideModal('#ipModal');
             } catch (error) {
-                console.error('Ошибка выхода:', error);
-                alert('Не удалось выйти из аккаунта');
+                console.error('Sign out error:', error);
+                alert('Could not sign out of account');
             }
         }
     }
@@ -129,18 +132,18 @@ async signInWithDiscord() {
             const { data: { session }, error } = await this.supabase.auth.getSession();
             
             if (error) {
-                console.error('Ошибка проверки сессии:', error);
+                console.error('Session check error:', error);
                 return;
             }
 
             if (session) {
-                console.log('Сессия найдена:', session.user);
+                console.log('Session found:', session.user);
                 this.updateUI();
             } else {
-                console.log('Активная сессия не найдена');
+                console.log('No active session found');
             }
         } catch (error) {
-            console.error('Ошибка проверки авторизации:', error);
+            console.error('Auth check error:', error);
         }
     }
 
@@ -152,13 +155,13 @@ async signInWithDiscord() {
             const { data: { user }, error } = await this.supabase.auth.getUser();
             
             if (error) {
-                console.error('Ошибка получения пользователя:', error);
-                userSection.innerHTML = '<button class="login-btn">Войти</button>';
+                console.error('Error getting user:', error);
+                userSection.innerHTML = '<button class="login-btn">Sign In</button>';
                 return;
             }
 
             if (user) {
-                console.log('Пользователь найден:', user);
+                console.log('User found:', user);
                 
                 const name = user.user_metadata?.full_name || 
                             user.user_metadata?.global_name || 
@@ -179,11 +182,11 @@ async signInWithDiscord() {
                     </div>
                 `;
             } else {
-                userSection.innerHTML = '<button class="login-btn">Войти</button>';
+                userSection.innerHTML = '<button class="login-btn">Sign In</button>';
             }
         } catch (error) {
-            console.error('Ошибка обновления UI:', error);
-            userSection.innerHTML = '<button class="login-btn">Войти</button>';
+            console.error('UI update error:', error);
+            userSection.innerHTML = '<button class="login-btn">Sign In</button>';
         }
     }
 
@@ -192,7 +195,7 @@ async signInWithDiscord() {
             const { data: { user }, error } = await this.supabase.auth.getUser();
             
             if (error) {
-                console.error('Ошибка проверки пользователя:', error);
+                console.error('User check error:', error);
                 this.showModal('#authPage');
                 return;
             }
@@ -203,7 +206,7 @@ async signInWithDiscord() {
                 this.showModal('#authPage');
             }
         } catch (error) {
-            console.error('Ошибка обработки кнопки сервера:', error);
+            console.error('Server button handling error:', error);
             this.showModal('#authPage');
         }
     }
@@ -214,18 +217,18 @@ async signInWithDiscord() {
         try {
             await navigator.clipboard.writeText(ip);
             
-            // Визуальная обратная связь
+            // Visual feedback
             button.classList.add('copied');
             
-            // Восстанавливаем через 1.2 секунды
+            // Reset after 1.2 seconds
             setTimeout(() => {
                 button.classList.remove('copied');
             }, 1200);
             
         } catch (error) {
-            console.error('Ошибка копирования:', error);
+            console.error('Copy error:', error);
             
-            // Fallback для старых браузеров
+            // Fallback for older browsers
             try {
                 const textArea = document.createElement('textarea');
                 textArea.value = ip;
@@ -238,19 +241,19 @@ async signInWithDiscord() {
                 setTimeout(() => button.classList.remove('copied'), 1200);
                 
             } catch (fallbackError) {
-                alert('Не удалось скопировать IP. Скопируйте вручную: ' + ip);
+                alert('Could not copy IP. Copy manually: ' + ip);
             }
         }
     }
 }
 
-// Автоматическая инициализация при загрузке
+// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Ждем загрузки Supabase
+    // Check if Supabase is loaded
     if (typeof window.supabase !== 'undefined') {
         new AuthManager();
     } else {
-        // Если Supabase еще не загружен, ждем его
+        // If Supabase is not yet loaded, wait for it
         const checkSupabase = setInterval(() => {
             if (typeof window.supabase !== 'undefined') {
                 clearInterval(checkSupabase);
@@ -260,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Глобальные функции для кнопок
+// Global functions for buttons
 window.scrollToServers = function() {
     const el = document.getElementById('servers-section');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
