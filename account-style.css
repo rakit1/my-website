@@ -52,10 +52,11 @@
     letter-spacing: 0.5px;
 }
 
+/* ИЗМЕНЕНО: Цвет роли администратора */
 .user-role.administrator {
-    background: linear-gradient(45deg, var(--primary), #a259ff);
+    background: linear-gradient(45deg, #e74c3c, #c0392b);
     color: white;
-    box-shadow: 0 4px 15px rgba(120, 91, 255, 0.2);
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.2);
 }
 
 .user-role.player {
@@ -69,6 +70,42 @@
   font-size: 1rem;
   margin: 0;
 }
+
+/* СТИЛИ ДЛЯ АДМИН-ПАНЕЛИ */
+.admin-panel-section {
+    margin-top: -30px;
+    margin-bottom: 50px;
+}
+
+.admin-panel-button {
+    background: rgba(231, 76, 60, 0.1);
+    border: 1px solid rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+    padding: 12px 20px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s ease;
+}
+
+.admin-panel-button:hover {
+    background: rgba(231, 76, 60, 0.2);
+    border-color: rgba(231, 76, 60, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+.admin-panel-button .ticket-count {
+    background: #e74c3c;
+    color: white;
+    font-size: 0.8rem;
+    padding: 3px 8px;
+    border-radius: 10px;
+}
+/* КОНЕЦ СТИЛЕЙ ДЛЯ АДМИН-ПАНЕЛИ */
 
 .tickets-section .section-title {
   text-align: left;
@@ -112,6 +149,14 @@
     margin-bottom: 10px;
     display: block;
 }
+
+/* СТИЛЬ ДЛЯ ИМЕНИ ПОЛЬЗОВАТЕЛЯ В СПИСКЕ ТИКЕТОВ (ДЛЯ АДМИНА) */
+.ticket-author {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 10px;
+}
+
 
 .ticket-description {
   margin: 0 0 15px 0;
