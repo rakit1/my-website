@@ -4,6 +4,7 @@ class AccountPage {
         this.user = null;
         this.profileCard = document.getElementById('user-profile-card');
         this.ticketsList = document.getElementById('tickets-list');
+        this.adminPanelSection = document.getElementById('admin-panel-section');
         this.init();
     }
 
@@ -12,7 +13,7 @@ class AccountPage {
 
         if (user) {
             this.user = user;
-            this.displayUserProfile(); // Теперь эта функция асинхронная
+            this.displayUserProfile();
             this.fetchAndDisplayTickets();
             document.body.addEventListener('click', (e) => {
                 if (e.target.closest('.logout-btn')) {
@@ -31,8 +32,7 @@ class AccountPage {
         const email = this.user.email;
         const avatarUrl = this.user.user_metadata?.avatar_url;
 
-        // Получаем роль из нашей новой таблицы profiles
-        let userRole = 'Игрок'; // Роль по умолчанию
+        let userRole = 'Игрок';
         try {
             const { data, error } = await this.authManager.supabase
                 .from('profiles')
@@ -40,13 +40,18 @@ class AccountPage {
                 .eq('id', this.user.id)
                 .single();
 
-            if (error) throw error;
+            if (error && error.code !== 'PGRST116') throw error;
             if (data) userRole = data.role;
+
+            // Если пользователь - админ, показываем кнопку
+            if (userRole === 'Администратор') {
+                this.displayAdminButton();
+            }
+
         } catch (error) {
             console.error('Ошибка при получении роли пользователя:', error.message);
         }
         
-        // Определяем класс для стилизации роли
         const roleClass = userRole === 'Администратор' ? 'administrator' : 'player';
 
         this.profileCard.innerHTML = `
@@ -57,6 +62,28 @@ class AccountPage {
             <span class="user-role ${roleClass}">${userRole}</span>
             <p class="profile-email">${email}</p>
         `;
+    }
+
+    async displayAdminButton() {
+        // Получаем количество открытых тикетов
+        const { count, error } = await this.authManager.supabase
+            .from('tickets')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_closed', false);
+
+        if (error) {
+            console.error('Не удалось получить количество тикетов:', error);
+            return;
+        }
+        
+        if (this.adminPanelSection) {
+            this.adminPanelSection.innerHTML = `
+                <a href="admin.html" class="admin-panel-button">
+                    Отвечать на тикеты
+                    <span class="ticket-count">${count}</span>
+                </a>
+            `;
+        }
     }
 
     async fetchAndDisplayTickets() {
