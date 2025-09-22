@@ -901,4 +901,41 @@ a:focus-visible {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}/* Исправление курсора для кнопок */
+.login-btn, 
+.logout-btn, 
+.user-name, 
+.server-join-btn, 
+.btn-discord, 
+.ip-btn {
+    cursor: pointer !important;
+}
+
+/* Стили для ошибок */
+.error-toast {
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Улучшение hover для Discord кнопки */
+.btn-discord:hover {
+    cursor: pointer;
+    transform: translateY(-2px);
+    border-color: rgba(88, 101, 242, 0.8) !important;
+    background: rgba(88, 101, 242, 0.1) !important;
+}
+
+/* Убедимся что все кнопки имеют pointer курсор */
+button, 
+[role="button"], 
+.btn, 
+.login-btn, 
+.logout-btn, 
+.server-join-btn, 
+.ip-btn {
+    cursor: pointer !important;
 }
