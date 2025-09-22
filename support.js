@@ -21,6 +21,9 @@ class SupportPage {
         }
         this.user = user;
         
+        // ВОТ ЭТА СТРОЧКА! Она покажет нам всю информацию о пользователе.
+        console.log('User data from Supabase:', this.user);
+
         this.updateUserUI();
         this.form.addEventListener('submit', (e) => this.handleSubmit(e));
     }
@@ -31,7 +34,6 @@ class SupportPage {
         const description = this.form.elements.description.value;
         const submitButton = this.form.querySelector('button[type="submit"]');
 
-        // Получаем имена из метаданных пользователя
         const displayName = this.user.user_metadata?.full_name || 'Неизвестно';
         const uniqueUsername = this.user.user_metadata?.user_name || 'Неизвестно';
 
@@ -44,8 +46,8 @@ class SupportPage {
                 .insert([
                     { 
                         description: description,
-                        username: displayName, // Отображаемое имя
-                        discord_username: uniqueUsername, // Уникальный юзернейм
+                        username: displayName,
+                        discord_username: uniqueUsername,
                         user_id: this.user.id 
                     }
                 ]);
@@ -126,11 +128,9 @@ class SupportPage {
             console.error('Ошибка при выходе:', error.message);
             alert('Не удалось выйти. Попробуйте еще раз.');
         } else {
-            // Успешный выход, перенаправляем на главную
             window.location.href = 'index.html';
         }
     }
 }
 
-// Запускаем приложение для страницы поддержки
 new SupportPage();
