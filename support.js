@@ -26,18 +26,23 @@ class SupportPage {
             if (e.target.closest('.logout-btn')) {
                 this.authManager.signOut();
             }
+            // Закрытие модального окна по клику на фон или крестик
+            if (e.target.closest('.close-auth') || e.target === this.loginPromptModal) {
+                this.loginPromptModal.classList.remove('active');
+            }
         });
     }
 
     setupAuthenticatedView() {
         this.supportContent.style.display = 'block';
-        this.loginPromptModal.style.display = 'none';
-        this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+        this.loginPromptModal.classList.remove('active');
     }
 
+    // ИСПРАВЛЕНО ЗДЕСЬ
     setupGuestView() {
         this.supportContent.style.display = 'none';
-        this.loginPromptModal.style.display = 'flex';
+        // Используем новый метод с добавлением класса для анимации
+        this.loginPromptModal.classList.add('active'); 
         this.promptLoginBtn.addEventListener('click', () => {
             this.authManager.signInWithDiscord();
         });
@@ -57,28 +62,26 @@ class SupportPage {
         submitButton.textContent = 'Отправка...';
         
         try {
-            // .select() в конце нужен, чтобы получить ID созданного тикета
             const { data, error } = await this.authManager.supabase
                 .from('tickets')
                 .insert([{ description: description, username: displayName, user_id: this.user.id }])
-                .select();
+                .select()
+                .single();
 
             if (error) throw error;
             
-            const newTicketId = data[0].id;
+            const newTicketId = data.id;
 
-            // Сразу добавляем первое сообщение в чат
             const { error: messageError } = await this.authManager.supabase
                 .from('messages')
                 .insert([{ ticket_id: newTicketId, user_id: this.user.id, content: description }]);
                 
             if (messageError) throw messageError;
 
-            // Перенаправляем на страницу нового тикета
             document.body.classList.add('fade-out');
             setTimeout(() => {
                 window.location.href = `ticket.html?id=${newTicketId}`;
-            }, 500);
+            }, 250);
 
         } catch (error) {
             this.showFeedback(`Ошибка: ${error.message}`, 'error');
