@@ -8,6 +8,12 @@
   --gap: 40px;
 }
 
+/* Стиль для выделения текста */
+::selection {
+  background-color: #403f5b;
+  color: var(--text);
+}
+
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 
@@ -17,7 +23,19 @@ body {
   color: var(--text);
   line-height: 1.45;
   scroll-behavior: smooth;
+  /* Стили для анимации перехода */
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
 }
+
+body.fade-in {
+    opacity: 1;
+}
+
+body.fade-out {
+    opacity: 0;
+}
+
 
 /* Header */
 header {
@@ -540,7 +558,6 @@ nav a.active::after {
   color: var(--muted);
   font-size: 1.5rem;
   cursor: pointer;
-  transition: color 0.2s ease;
   width: 30px;
   height: 30px;
   display: flex;
@@ -657,7 +674,6 @@ nav a.active::after {
   color: var(--muted);
   font-size: 1.5rem;
   cursor: pointer;
-  transition: color 0.2s ease;
   width: 30px;
   height: 30px;
   display: flex;
