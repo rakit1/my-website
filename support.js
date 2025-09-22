@@ -1,7 +1,7 @@
 class SupportPage {
     constructor() {
         this.SUPABASE_URL = "https://egskxyxgzdidfbxhjaud.supabase.co";
-        this.SUPABASE_ANON_KEY = "eyJhbGciOiJIJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw";
+        this.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw";
         this.supabase = null;
         this.user = null;
 
@@ -21,6 +21,7 @@ class SupportPage {
         }
         this.user = user;
         
+        // Я убрал отсюда console.log
         this.updateUserUI();
         this.form.addEventListener('submit', (e) => this.handleSubmit(e));
     }
@@ -30,21 +31,21 @@ class SupportPage {
         
         const description = this.form.elements.description.value;
         const submitButton = this.form.querySelector('button[type="submit"]');
-
-        // ИЗМЕНЕНИЕ: Теперь мы берем ОБЫЧНОЕ имя и используем его для обоих полей
+        
+        // Теперь мы берем только то имя, которое у нас есть
         const displayName = this.user.user_metadata?.full_name || 'Неизвестно';
 
         submitButton.disabled = true;
         submitButton.textContent = 'Отправка...';
 
         try {
+            // ИЗМЕНЕНИЕ: Убрал поле discord_username, так как мы удалили колонку
             const { error } = await this.supabase
                 .from('tickets')
                 .insert([
                     { 
                         description: description,
-                        username: displayName, 
-                        discord_username: displayName, // Используем обычное имя и здесь
+                        username: displayName,
                         user_id: this.user.id 
                     }
                 ]);
@@ -81,7 +82,7 @@ class SupportPage {
         const avatarUrl = this.user.user_metadata?.avatar_url;
         
         userSection.innerHTML = `
-            <div class.user-info">
+            <div class="user-info">
                 <div class="user-avatar" title="${name}">
                     ${avatarUrl ? `<img src="${avatarUrl}" alt="Аватар" style="width:100%;height:100%;border-radius:50%;">` : name.charAt(0).toUpperCase()}
                 </div>
