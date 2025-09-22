@@ -4,7 +4,6 @@ class TicketPage {
         this.user = null;
         this.ticketId = new URLSearchParams(window.location.search).get('id');
         
-        // Элементы страницы
         this.chatBox = document.getElementById('chat-box');
         this.messageForm = document.getElementById('message-form');
         this.ticketTitle = document.getElementById('ticket-title');
@@ -12,12 +11,11 @@ class TicketPage {
         this.sendMessageButton = this.messageForm.querySelector('button[type="submit"]');
         this.closeTicketButton = document.getElementById('close-ticket-btn');
 
-        // Элементы модального окна
         this.confirmationModal = document.getElementById('confirmation-modal');
         this.confirmCloseBtn = document.getElementById('confirm-close-btn');
         this.cancelCloseBtn = document.getElementById('cancel-close-btn');
 
-        this.isTicketClosed = false; // Состояние тикета
+        this.isTicketClosed = false;
 
         this.init();
     }
@@ -51,6 +49,7 @@ class TicketPage {
         if (ticketError || !ticketData) {
             this.chatBox.innerHTML = '<p class="error-message">Не удалось найти тикет или у вас нет к нему доступа.</p>';
             this.messageForm.style.display = 'none';
+            this.closeTicketButton.style.display = 'none';
             return;
         }
 
@@ -81,10 +80,7 @@ class TicketPage {
         
         const date = new Date(message.created_at).toLocaleString('ru-RU');
 
-        messageDiv.innerHTML = `
-            <p>${message.content}</p>
-            <span>${date}</span>
-        `;
+        messageDiv.innerHTML = `<p>${message.content}</p><span>${date}</span>`;
         this.chatBox.appendChild(messageDiv);
     }
     
@@ -93,7 +89,6 @@ class TicketPage {
     }
 
     setupEventListeners() {
-        // Отправка сообщения
         this.messageForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const content = this.messageTextarea.value.trim();
@@ -110,10 +105,7 @@ class TicketPage {
 
                 if (error) throw error;
                 
-                this.addMessageToBox(data);
-                this.scrollToBottom();
                 this.messageForm.reset();
-
             } catch (error) {
                 alert('Ошибка отправки сообщения: ' + error.message);
             } finally {
@@ -121,25 +113,20 @@ class TicketPage {
             }
         });
 
-        // Открытие модального окна
         this.closeTicketButton.addEventListener('click', () => {
-            this.confirmationModal.classList.add('active');
+            if (!this.isTicketClosed) this.confirmationModal.classList.add('active');
         });
 
-        // Закрытие модального окна
         this.cancelCloseBtn.addEventListener('click', () => {
             this.confirmationModal.classList.remove('active');
         });
 
-        // Подтверждение закрытия тикета
         this.confirmCloseBtn.addEventListener('click', () => this.executeTicketClosure());
     }
-    
-    // Новая функция для выполнения закрытия тикета
+
     async executeTicketClosure() {
-        this.confirmationModal.classList.remove('active');
-        this.closeTicketButton.disabled = true;
-        this.closeTicketButton.textContent = 'Закрытие...';
+        this.confirmCloseBtn.disabled = true;
+        this.confirmCloseBtn.textContent = 'Закрытие...';
 
         try {
             const { error } = await this.authManager.supabase
@@ -152,11 +139,12 @@ class TicketPage {
 
             this.isTicketClosed = true;
             this.updateTicketUI();
-
         } catch (error) {
             alert('Ошибка при закрытии тикета: ' + error.message);
-            this.closeTicketButton.disabled = false;
-            this.closeTicketButton.textContent = 'Закрыть тикет';
+        } finally {
+            this.confirmationModal.classList.remove('active');
+            this.confirmCloseBtn.disabled = false;
+            this.confirmCloseBtn.textContent = 'Закрыть тикет';
         }
     }
 
@@ -168,7 +156,7 @@ class TicketPage {
             this.closeTicketButton.disabled = true;
             this.closeTicketButton.textContent = 'Тикет закрыт';
         } else {
-             this.messageTextarea.disabled = false;
+            this.messageTextarea.disabled = false;
             this.messageTextarea.placeholder = 'Введите ваше сообщение...';
             this.sendMessageButton.disabled = false;
             this.closeTicketButton.disabled = false;
@@ -185,10 +173,8 @@ class TicketPage {
                 table: 'messages',
                 filter: `ticket_id=eq.${this.ticketId}`
             }, (payload) => {
-                if (payload.new.user_id !== this.user.id) {
-                    this.addMessageToBox(payload.new);
-                    this.scrollToBottom();
-                }
+                this.addMessageToBox(payload.new);
+                this.scrollToBottom();
             })
             .subscribe();
     }
