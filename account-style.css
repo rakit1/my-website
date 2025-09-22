@@ -93,7 +93,6 @@
   margin: 0 0 15px 0;
   color: var(--text);
   line-height: 1.6;
-  /* Обрезка длинного текста */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;  
@@ -104,7 +103,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: auto; /* Прижимает футер вниз */
+    margin-top: auto;
 }
 
 .ticket-date {
@@ -121,6 +120,18 @@
     color: var(--text);
 }
 
+.ticket-status {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.ticket-status.closed {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--muted);
+}
+
 .no-tickets-message {
   text-align: center;
   color: var(--muted);
@@ -132,7 +143,6 @@
     color: #eb445a;
 }
 
-/* Скелетоны для загрузки */
 .skeleton-avatar {
     width: 100px;
     height: 100px;
