@@ -1,0 +1,117 @@
+.account-container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 20px;
+}
+
+.profile-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius);
+  padding: 40px;
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  background: linear-gradient(45deg, var(--primary), #8a2be2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: 600;
+  color: white;
+  overflow: hidden;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-name {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+}
+
+.profile-email {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.tickets-section .section-title {
+  text-align: left;
+  font-size: 1.8rem;
+  margin-bottom: 30px;
+}
+
+.tickets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.ticket-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.ticket-description {
+  margin: 0 0 15px 0;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.ticket-date {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.no-tickets-message {
+  text-align: center;
+  color: var(--muted);
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+}
+.no-tickets-message.error {
+    color: #eb445a;
+}
+
+/* Скелетоны для загрузки */
+.skeleton-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    background: rgba(255, 255, 255, 0.05);
+    animation: pulse-bg 1.5s infinite;
+}
+.skeleton-text {
+    height: 24px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    margin: 0 auto 10px;
+    animation: pulse-bg 1.5s infinite;
+}
+.skeleton-ticket {
+    height: 100px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    animation: pulse-bg 1.5s infinite;
+}
+
+@keyframes pulse-bg {
+    0% { background-color: rgba(255, 255, 255, 0.03); }
+    50% { background-color: rgba(255, 255, 255, 0.06); }
+    100% { background-color: rgba(255, 255, 255, 0.03); }
+}
