@@ -142,7 +142,10 @@ class App {
     async signInWithDiscord() {
         const { error } = await this.supabase.auth.signInWithOAuth({
             provider: 'discord',
-            options: { redirectTo: window.location.href }
+            options: { 
+                redirectTo: window.location.href,
+                scopes: 'identify' // ИЗМЕНЕНИЕ: Мы просим у Discord разрешение на просмотр имени
+            }
         });
         if (error) console.error('Ошибка входа через Discord:', error);
     }
