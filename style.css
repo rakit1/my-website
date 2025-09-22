@@ -631,17 +631,19 @@ nav a.active::after {
 }
 
 .ip-address {
-  font-family: 'IBM Plex Mono', monospace;
+  /* Убираем моноширинный шрифт и используем основной шрифт сайта */
+  font-family: inherit; 
   font-size: 1rem;
   color: var(--text);
-  font-weight: 500;
-  letter-spacing: 0.5px;
+  /* Делаем шрифт чуть жирнее для выделения */
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
 .ip-region {
   font-size: 0.8rem;
   color: var(--muted);
-  margin-top: 2px;
+  margin-top: 4px; /* Немного увеличил отступ для лучшей читаемости */
 }
 
 .copy-indicator {
