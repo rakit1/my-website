@@ -1,20 +1,22 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const body = document.body;
-    body.classList.add('fade-in');
+    // Этот код применяется только при загрузке страницы, для анимации появления.
+    // Логика перехода по ссылкам теперь в основном скрипте.
+    document.body.classList.add('fade-in');
 
     const handleLinkClick = (event) => {
         const link = event.target.closest('a');
         
-        // Проверяем, что ссылка внутренняя и не является якорем
-        if (link && link.href && link.hostname === window.location.hostname && !link.href.includes('#')) {
+        // Проверяем, что ссылка внутренняя, не является якорем и не открывается в новой вкладке
+        if (link && link.href && link.hostname === window.location.hostname && !link.href.includes('#') && link.target !== '_blank') {
             event.preventDefault();
             const destination = link.href;
 
-            body.classList.add('fade-out');
+            document.body.classList.add('fade-out');
 
+            // Уменьшаем задержку для более быстрого перехода
             setTimeout(() => {
                 window.location.href = destination;
-            }, 500); // Задержка соответствует времени анимации
+            }, 250); // 250 миллисекунд
         }
     };
 
