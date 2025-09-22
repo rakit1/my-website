@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>MyProject — Главная</title>
+<title>CBWorlds — Главная</title>
 <link rel="stylesheet" href="style.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,7 +47,7 @@
 
         <div class="online-realtime">
           <div class="online-dot"></div>
-          <span class="online-text">Онлайн: <span class="online-number">20</span> игроков</span>
+          <span class="online-text">Онлайн: <span id="online-count" class="online-number">...</span> игроков</span>
         </div>
 
         <div class="hero-actions">
@@ -156,5 +156,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script src="script.js"></script>
-<script src="transition.js"></script> </body>
+<script src="transition.js"></script> 
+</body>
 </html>
