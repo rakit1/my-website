@@ -26,11 +26,14 @@ class SupportPage {
             if (e.target.closest('.logout-btn')) {
                 this.authManager.signOut();
             }
-            // Закрытие модального окна по клику на фон или крестик
             if (e.target.closest('.close-auth') || e.target === this.loginPromptModal) {
                 this.loginPromptModal.classList.remove('active');
             }
         });
+
+        if (this.form) {
+            this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+        }
     }
 
     setupAuthenticatedView() {
@@ -38,10 +41,8 @@ class SupportPage {
         this.loginPromptModal.classList.remove('active');
     }
 
-    // ИСПРАВЛЕНО ЗДЕСЬ
     setupGuestView() {
         this.supportContent.style.display = 'none';
-        // Используем новый метод с добавлением класса для анимации
         this.loginPromptModal.classList.add('active'); 
         this.promptLoginBtn.addEventListener('click', () => {
             this.authManager.signInWithDiscord();
