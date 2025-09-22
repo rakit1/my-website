@@ -1,16 +1,17 @@
 // supabase-auth.js
 class AuthManager {
     constructor() {
-        this.SUPABASE_URL = "https://egskxyxgzdidfbxhjaud.supabase.co";
-        this.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw";
-        this.supabase = null;
-        this.isInitialized = false;
-        
         // Защита от множественной инициализации
         if (window.authManagerInstance) {
             return window.authManagerInstance;
         }
         window.authManagerInstance = this;
+        
+        this.SUPABASE_URL = "https://egskxyxgzdidfbxhjaud.supabase.co";
+        this.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw";
+        this.supabase = null;
+        this.isInitialized = false;
+        this.eventListeners = [];
         
         this.init();
     }
@@ -30,7 +31,7 @@ class AuthManager {
             }
             this.supabase = window.supabaseClient;
             
-            this.setupGlobalEventListeners();
+            this.setupEventListeners();
             
             // Слушаем изменения статуса авторизации
             this.supabase.auth.onAuthStateChange((event, session) => {
@@ -38,13 +39,13 @@ class AuthManager {
                 this.updateUI();
             });
             
-            // Проверяем авторизацию после настройки listeners
+            // Проверяем авторизацию
             await this.checkAuth();
             
             this.isInitialized = true;
+            console.log('AuthManager инициализирован');
         } catch (error) {
             console.error('Ошибка инициализации Supabase:', error);
-            this.showError('Ошибка загрузки системы авторизации');
         }
     }
 
@@ -68,12 +69,12 @@ class AuthManager {
         });
     }
 
-    setupGlobalEventListeners() {
-        // Удаляем старые обработчики перед добавлением новых
-        this.removeAllEventListeners();
+    setupEventListeners() {
+        // Очищаем старые обработчики
+        this.removeEventListeners();
         
-        // Делегирование событий для динамического контента
-        document.addEventListener('click', (e) => {
+        // Делегирование событий для всего документа
+        const handleClick = (e) => {
             // Кнопка Discord в модалке
             if (e.target.closest('#discordSignIn')) {
                 e.preventDefault();
@@ -112,13 +113,8 @@ class AuthManager {
             }
             
             // Закрытие модалок по клику вне контента
-            if (e.target.id === 'authPage') {
-                this.hideModal('#authPage');
-                return;
-            }
-            
-            if (e.target.id === 'ipModal') {
-                this.hideModal('#ipModal');
+            if (e.target.id === 'authPage' || e.target.id === 'ipModal') {
+                this.hideModal('#' + e.target.id);
                 return;
             }
             
@@ -145,13 +141,28 @@ class AuthManager {
                     dropdown.classList.remove('active');
                 }
             });
-        });
+        };
+
+        document.addEventListener('click', handleClick);
+        this.eventListeners.push({ type: 'click', handler: handleClick });
+        
+        // Закрытие модалок по ESC
+        const handleKeydown = (e) => {
+            if (e.key === 'Escape') {
+                this.hideModal('#authPage');
+                this.hideModal('#ipModal');
+            }
+        };
+        
+        document.addEventListener('keydown', handleKeydown);
+        this.eventListeners.push({ type: 'keydown', handler: handleKeydown });
     }
 
-    removeAllEventListeners() {
-        // Клонируем и заменяем body чтобы удалить все обработчики
-        const newBody = document.body.cloneNode(true);
-        document.body.parentNode.replaceChild(newBody, document.body);
+    removeEventListeners() {
+        this.eventListeners.forEach(({ type, handler }) => {
+            document.removeEventListener(type, handler);
+        });
+        this.eventListeners = [];
     }
 
     showModal(selector) {
@@ -161,6 +172,7 @@ class AuthManager {
             modal.setAttribute('aria-hidden', 'false');
             document.body.style.overflow = 'hidden';
             
+            // Фокусируемся на первом интерактивном элементе
             const focusElement = modal.querySelector('button, [tabindex]');
             if (focusElement) focusElement.focus();
         }
@@ -177,9 +189,8 @@ class AuthManager {
 
     async signInWithDiscord() {
         try {
-            this.showLoading('Авторизация через Discord...');
+            console.log('Начало авторизации через Discord...');
             
-            // Динамический URL редиректа
             const redirectUrl = window.location.origin + window.location.pathname;
             
             const { data, error } = await this.supabase.auth.signInWithOAuth({
@@ -199,25 +210,22 @@ class AuthManager {
         } catch (error) {
             console.error('Ошибка авторизации:', error);
             this.showError('Ошибка при входе через Discord: ' + error.message);
-        } finally {
-            this.hideLoading();
         }
     }
 
     async signOut() {
         try {
-            this.showLoading('Выход из аккаунта...');
+            console.log('Выполняется выход...');
             const { error } = await this.supabase.auth.signOut();
             if (error) throw error;
             
+            console.log('Выход выполнен успешно');
             this.updateUI();
             this.hideModal('#authPage');
             this.hideModal('#ipModal');
         } catch (error) {
             console.error('Ошибка выхода:', error);
             this.showError('Не удалось выйти из аккаунта');
-        } finally {
-            this.hideLoading();
         }
     }
 
@@ -227,7 +235,6 @@ class AuthManager {
             
             if (error) {
                 console.warn('Ошибка проверки сессии:', error.message);
-                // Не бросаем ошибку, продолжаем с null сессией
             }
 
             this.updateUI();
@@ -249,7 +256,6 @@ class AuthManager {
             
             if (error) {
                 console.warn('Ошибка получения пользователя:', error.message);
-                // Показываем кнопку входа при ошибке
                 this.renderLoginButton(userSection);
                 return;
             }
@@ -266,7 +272,7 @@ class AuthManager {
     }
 
     renderLoginButton(container) {
-        container.innerHTML = '<button class="login-btn" style="cursor: pointer;">Войти</button>';
+        container.innerHTML = '<button class="login-btn">Войти</button>';
     }
 
     renderUserInfo(container, user) {
@@ -288,9 +294,9 @@ class AuthManager {
                     }
                 </div>
                 <div class="user-dropdown">
-                    <span class="user-name" style="cursor: pointer;">${name}</span>
+                    <span class="user-name">${name}</span>
                     <div class="dropdown-menu">
-                        <button class="logout-btn" style="cursor: pointer;">Выйти</button>
+                        <button class="logout-btn">Выйти</button>
                     </div>
                 </div>
             </div>
@@ -359,15 +365,6 @@ class AuthManager {
         }
     }
 
-    showLoading(message = 'Загрузка...') {
-        // Можно добавить индикатор
-        console.log('Loading:', message);
-    }
-
-    hideLoading() {
-        // Скрыть индикатор
-    }
-
     showError(message) {
         // Временное решение - можно заменить на красивый toast
         const existingError = document.querySelector('.error-toast');
@@ -393,25 +390,22 @@ class AuthManager {
     }
 }
 
-// Защита ключей - обфускация (базовая)
-const protectedConfig = (function() {
-    const base64Url = "aHR0cHM6Ly9lZ3NreHl4Z3pkaWRmYnhoamF1ZC5zdXBhYmFzZS5j";
-    const base64Key = "ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnBjM01pT2lKemRYQnlaV1JwYm1jdGNuVnpkSE1pTENKcFlYUWlPakUyTnpnM09UY3pOek45Llg2MGdrZjhoajBZRUt6TGRDRk9PWFRBbGZESjJBb0lOb0pIWThwUGVERnc";
-    
-    return {
-        url: atob(base64Url + 'o'),
-        key: atob(base64Key)
-    };
-})();
-
 // Инициализация при загрузке DOM
 document.addEventListener('DOMContentLoaded', function() {
-    // Задержка для гарантии загрузки Supabase
-    setTimeout(() => {
-        if (!window.authManager) {
+    // Ждем загрузки Supabase
+    const checkSupabase = setInterval(() => {
+        if (typeof window.supabase !== 'undefined') {
+            clearInterval(checkSupabase);
             window.authManager = new AuthManager();
         }
     }, 100);
+    
+    // Таймаут на случай если Supabase не загрузится
+    setTimeout(() => {
+        if (typeof window.supabase === 'undefined') {
+            console.error('Supabase не загрузился вовремя');
+        }
+    }, 5000);
 });
 
 // Глобальная функция для кнопок
