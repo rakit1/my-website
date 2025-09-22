@@ -91,8 +91,7 @@ nav a.active::after {
   overflow: hidden;
 }
 
-/* === ИЗМЕНЕНИЯ ЗДЕСЬ: Новые стили для выпадающего меню === */
-
+/* === Стили для выпадающего меню === */
 .user-dropdown {
   position: relative;
 }
@@ -102,8 +101,8 @@ nav a.active::after {
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 8px; /* Немного увеличил отступ */
-  padding: 6px 10px 6px 6px; /* Скорректировал отступы */
+  gap: 8px;
+  padding: 6px 10px 6px 6px;
   border-radius: 8px;
   transition: background-color 0.2s ease;
   cursor: pointer;
@@ -117,12 +116,12 @@ nav a.active::after {
   position: absolute;
   top: 100%;
   right: 0;
-  background: #18181b; /* Сделал фон чуть плотнее */
+  background: #18181b;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 6px;
   margin-top: 8px;
-  min-width: 150px; /* Сделал меню чуть шире */
+  min-width: 150px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
   opacity: 0;
@@ -170,9 +169,7 @@ nav a.active::after {
 .logout-btn:hover svg {
   opacity: 1;
 }
-
-/* === КОНЕЦ ИЗМЕНЕНИЙ В МЕНЮ === */
-
+/* === КОНЕЦ стилей для меню === */
 
 .login-btn {
   background: linear-gradient(180deg, var(--primary), var(--primary-strong));
@@ -628,11 +625,9 @@ nav a.active::after {
 }
 
 .ip-address {
-  /* Убираем моноширинный шрифт и используем основной шрифт сайта */
   font-family: inherit; 
   font-size: 1rem;
   color: var(--text);
-  /* Делаем шрифт чуть жирнее для выделения */
   font-weight: 600;
   letter-spacing: 0.2px;
 }
@@ -640,7 +635,7 @@ nav a.active::after {
 .ip-region {
   font-size: 0.8rem;
   color: var(--muted);
-  margin-top: 4px; /* Немного увеличил отступ для лучшей читаемости */
+  margin-top: 4px;
 }
 
 .copy-indicator {
@@ -901,7 +896,9 @@ a:focus-visible {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}/* Исправление курсора для кнопок */
+}
+
+/* Исправление курсора для кнопок */
 .login-btn, 
 .logout-btn, 
 .user-name, 
@@ -938,4 +935,96 @@ button,
 .server-join-btn, 
 .ip-btn {
     cursor: pointer !important;
+}
+
+/* СТИЛИ для страницы поддержки */
+
+.support-container {
+  max-width: 700px;
+  margin: 40px auto;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.support-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin-bottom: 15px;
+}
+
+.support-description {
+  color: var(--muted);
+  margin-bottom: 30px;
+}
+
+.ticket-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  text-align: left;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.form-group input,
+.form-group textarea {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.2);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.ticket-form .btn {
+  margin-top: 10px;
+}
+
+.form-feedback {
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 500;
+  display: none; /* Скрыто по умолчанию */
+}
+
+.form-feedback.visible {
+    display: block;
+}
+
+.form-feedback.success {
+  background: rgba(45, 211, 111, 0.1);
+  color: #2dd36f;
+}
+
+.form-feedback.error {
+  background: rgba(235, 68, 90, 0.1);
+  color: #eb445a;
 }
