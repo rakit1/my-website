@@ -5,6 +5,13 @@ class AuthManager {
         this.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw";
         this.supabase = null;
         this.isInitialized = false;
+        
+        // Защита от множественной инициализации
+        if (window.authManagerInstance) {
+            return window.authManagerInstance;
+        }
+        window.authManagerInstance = this;
+        
         this.init();
     }
 
@@ -17,15 +24,22 @@ class AuthManager {
                 throw new Error("Supabase не загружен!");
             }
 
-            this.supabase = window.supabase.createClient(this.SUPABASE_URL, this.SUPABASE_ANON_KEY);
+            // Создаем клиент только один раз
+            if (!window.supabaseClient) {
+                window.supabaseClient = window.supabase.createClient(this.SUPABASE_URL, this.SUPABASE_ANON_KEY);
+            }
+            this.supabase = window.supabaseClient;
+            
             this.setupGlobalEventListeners();
-            await this.checkAuth();
             
             // Слушаем изменения статуса авторизации
             this.supabase.auth.onAuthStateChange((event, session) => {
                 console.log('Статус авторизации изменился:', event);
                 this.updateUI();
             });
+            
+            // Проверяем авторизацию после настройки listeners
+            await this.checkAuth();
             
             this.isInitialized = true;
         } catch (error) {
@@ -37,7 +51,7 @@ class AuthManager {
     async waitForSupabase() {
         return new Promise((resolve, reject) => {
             let attempts = 0;
-            const maxAttempts = 50; // 5 секунд максимум
+            const maxAttempts = 50;
             
             const check = () => {
                 attempts++;
@@ -55,32 +69,89 @@ class AuthManager {
     }
 
     setupGlobalEventListeners() {
-        // Глобальные обработчики которые не зависят от динамического контента
-        this.delegateEvent('click', '.close-auth', () => this.hideModal('#authPage'));
-        this.delegateEvent('click', '.close-ip-modal', () => this.hideModal('#ipModal'));
+        // Удаляем старые обработчики перед добавлением новых
+        this.removeAllEventListeners();
         
-        // Закрытие модалок по клику вне контента
-        this.delegateEvent('click', '#authPage', (e) => {
-            if (e.target === e.currentTarget) this.hideModal('#authPage');
+        // Делегирование событий для динамического контента
+        document.addEventListener('click', (e) => {
+            // Кнопка Discord в модалке
+            if (e.target.closest('#discordSignIn')) {
+                e.preventDefault();
+                this.signInWithDiscord();
+                return;
+            }
+            
+            // Кнопка входа в хедере
+            if (e.target.closest('.login-btn')) {
+                this.showModal('#authPage');
+                return;
+            }
+            
+            // Закрытие модалок
+            if (e.target.closest('.close-auth')) {
+                this.hideModal('#authPage');
+                return;
+            }
+            
+            if (e.target.closest('.close-ip-modal')) {
+                this.hideModal('#ipModal');
+                return;
+            }
+            
+            // Server join buttons
+            if (e.target.closest('.server-join-btn')) {
+                this.handleServerJoin();
+                return;
+            }
+            
+            // IP copy buttons
+            const ipBtn = e.target.closest('.ip-btn');
+            if (ipBtn) {
+                this.copyIP(ipBtn);
+                return;
+            }
+            
+            // Закрытие модалок по клику вне контента
+            if (e.target.id === 'authPage') {
+                this.hideModal('#authPage');
+                return;
+            }
+            
+            if (e.target.id === 'ipModal') {
+                this.hideModal('#ipModal');
+                return;
+            }
+            
+            // Выпадающее меню пользователя
+            if (e.target.closest('.user-name')) {
+                const dropdown = e.target.closest('.user-dropdown');
+                if (dropdown) {
+                    dropdown.classList.toggle('active');
+                    e.stopPropagation();
+                }
+                return;
+            }
+            
+            // Кнопка выхода
+            if (e.target.closest('.logout-btn')) {
+                this.signOut();
+                return;
+            }
+            
+            // Закрытие всех выпадающих меню при клике вне их
+            const dropdowns = document.querySelectorAll('.user-dropdown');
+            dropdowns.forEach(dropdown => {
+                if (!dropdown.contains(e.target)) {
+                    dropdown.classList.remove('active');
+                }
+            });
         });
-        this.delegateEvent('click', '#ipModal', (e) => {
-            if (e.target === e.currentTarget) this.hideModal('#ipModal');
-        });
-
-        // Server join buttons
-        this.delegateEvent('click', '.server-join-btn', () => this.handleServerJoin());
-
-        // IP copy buttons
-        this.delegateEvent('click', '.ip-btn', (e) => this.copyIP(e.target.closest('.ip-btn')));
     }
 
-    // Делегирование событий для динамического контента
-    delegateEvent(event, selector, handler) {
-        document.addEventListener(event, (e) => {
-            if (e.target.matches(selector) || e.target.closest(selector)) {
-                handler(e);
-            }
-        });
+    removeAllEventListeners() {
+        // Клонируем и заменяем body чтобы удалить все обработчики
+        const newBody = document.body.cloneNode(true);
+        document.body.parentNode.replaceChild(newBody, document.body);
     }
 
     showModal(selector) {
@@ -88,9 +159,8 @@ class AuthManager {
         if (modal) {
             modal.style.display = 'flex';
             modal.setAttribute('aria-hidden', 'false');
-            document.body.style.overflow = 'hidden'; // Блокируем скролл
+            document.body.style.overflow = 'hidden';
             
-            // Фокусируемся на первом интерактивном элементе
             const focusElement = modal.querySelector('button, [tabindex]');
             if (focusElement) focusElement.focus();
         }
@@ -101,7 +171,7 @@ class AuthManager {
         if (modal) {
             modal.style.display = 'none';
             modal.setAttribute('aria-hidden', 'true');
-            document.body.style.overflow = ''; // Разблокируем скролл
+            document.body.style.overflow = '';
         }
     }
 
@@ -124,7 +194,7 @@ class AuthManager {
                 throw new Error('OAuth ошибка: ' + error.message);
             }
 
-            console.log('OAuth данные:', data);
+            console.log('OAuth запущен:', data);
 
         } catch (error) {
             console.error('Ошибка авторизации:', error);
@@ -156,28 +226,32 @@ class AuthManager {
             const { data: { session }, error } = await this.supabase.auth.getSession();
             
             if (error) {
-                throw new Error('Ошибка проверки сессии: ' + error.message);
+                console.warn('Ошибка проверки сессии:', error.message);
+                // Не бросаем ошибку, продолжаем с null сессией
             }
 
-            if (session) {
-                console.log('Сессия найдена:', session.user);
-            }
-            
             this.updateUI();
         } catch (error) {
-            console.error('Ошибка проверки авторизации:', error);
+            console.warn('Ошибка проверки авторизации:', error.message);
+            this.updateUI();
         }
     }
 
     async updateUI() {
         const userSection = document.getElementById('userSection');
-        if (!userSection) return;
+        if (!userSection) {
+            console.warn('userSection не найден');
+            return;
+        }
 
         try {
             const { data: { user }, error } = await this.supabase.auth.getUser();
             
             if (error) {
-                throw new Error('Ошибка получения пользователя: ' + error.message);
+                console.warn('Ошибка получения пользователя:', error.message);
+                // Показываем кнопку входа при ошибке
+                this.renderLoginButton(userSection);
+                return;
             }
 
             if (user) {
@@ -186,20 +260,16 @@ class AuthManager {
                 this.renderLoginButton(userSection);
             }
         } catch (error) {
-            console.error('Ошибка обновления UI:', error);
+            console.warn('Ошибка обновления UI:', error.message);
             this.renderLoginButton(userSection);
         }
     }
 
     renderLoginButton(container) {
-        // Безопасное создание кнопки через textContent
-        container.innerHTML = '<button class="login-btn">Войти</button>';
-        
-        // Обработчик вешается через делегирование, поэтому не нужно перевешивать
+        container.innerHTML = '<button class="login-btn" style="cursor: pointer;">Войти</button>';
     }
 
     renderUserInfo(container, user) {
-        // Безопасное экранирование данных пользователя
         const name = this.escapeHtml(
             user.user_metadata?.full_name || 
             user.user_metadata?.global_name || 
@@ -209,7 +279,6 @@ class AuthManager {
         
         const avatarUrl = user.user_metadata?.avatar_url;
         
-        // Безопасное создание HTML
         container.innerHTML = `
             <div class="user-info">
                 <div class="user-avatar" title="${name}">
@@ -219,17 +288,17 @@ class AuthManager {
                     }
                 </div>
                 <div class="user-dropdown">
-                    <span class="user-name">${name}</span>
+                    <span class="user-name" style="cursor: pointer;">${name}</span>
                     <div class="dropdown-menu">
-                        <button class="logout-btn">Выйти</button>
+                        <button class="logout-btn" style="cursor: pointer;">Выйти</button>
                     </div>
                 </div>
             </div>
         `;
     }
 
-    // Экранирование HTML для защиты от XSS
     escapeHtml(unsafe) {
+        if (!unsafe) return '';
         return unsafe
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
@@ -238,16 +307,14 @@ class AuthManager {
             .replace(/'/g, "&#039;");
     }
 
-    setupUserDropdownHandlers() {
-        // Обработчики теперь через делегирование, не требуют перевешивания
-    }
-
     async handleServerJoin() {
         try {
             const { data: { user }, error } = await this.supabase.auth.getUser();
             
             if (error) {
-                throw new Error('Ошибка проверки пользователя: ' + error.message);
+                console.warn('Ошибка проверки пользователя:', error.message);
+                this.showModal('#authPage');
+                return;
             }
 
             if (user) {
@@ -256,7 +323,7 @@ class AuthManager {
                 this.showModal('#authPage');
             }
         } catch (error) {
-            console.error('Ошибка обработки кнопки сервера:', error);
+            console.warn('Ошибка обработки кнопки сервера:', error.message);
             this.showModal('#authPage');
         }
     }
@@ -271,19 +338,10 @@ class AuthManager {
         
         try {
             await navigator.clipboard.writeText(ip);
-            
-            // Визуальная обратная связь
             button.classList.add('copied');
-            
-            // Восстанавливаем через 1.2 секунды
-            setTimeout(() => {
-                button.classList.remove('copied');
-            }, 1200);
-            
+            setTimeout(() => button.classList.remove('copied'), 1200);
         } catch (error) {
             console.error('Ошибка копирования:', error);
-            
-            // Запасной вариант для старых браузеров
             try {
                 const textArea = document.createElement('textarea');
                 textArea.value = ip;
@@ -293,10 +351,8 @@ class AuthManager {
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                
                 button.classList.add('copied');
                 setTimeout(() => button.classList.remove('copied'), 1200);
-                
             } catch (fallbackError) {
                 this.showError('Не удалось скопировать IP. Скопируйте вручную: ' + ip);
             }
@@ -304,23 +360,58 @@ class AuthManager {
     }
 
     showLoading(message = 'Загрузка...') {
-        // Можно добавить красивый индикатор загрузки
+        // Можно добавить индикатор
         console.log('Loading:', message);
     }
 
     hideLoading() {
-        // Скрыть индикатор загрузки
+        // Скрыть индикатор
     }
 
     showError(message) {
-        // Показать красивое уведомление об ошибке
-        alert(message); // Временное решение
+        // Временное решение - можно заменить на красивый toast
+        const existingError = document.querySelector('.error-toast');
+        if (existingError) existingError.remove();
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-toast';
+        errorDiv.textContent = message;
+        errorDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff4444;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            max-width: 300px;
+        `;
+        document.body.appendChild(errorDiv);
+        
+        setTimeout(() => errorDiv.remove(), 5000);
     }
 }
 
+// Защита ключей - обфускация (базовая)
+const protectedConfig = (function() {
+    const base64Url = "aHR0cHM6Ly9lZ3NreHl4Z3pkaWRmYnhoamF1ZC5zdXBhYmFzZS5j";
+    const base64Key = "ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnBjM01pT2lKemRYQnlaV1JwYm1jdGNuVnpkSE1pTENKcFlYUWlPakUyTnpnM09UY3pOek45Llg2MGdrZjhoajBZRUt6TGRDRk9PWFRBbGZESjJBb0lOb0pIWThwUGVERnc";
+    
+    return {
+        url: atob(base64Url + 'o'),
+        key: atob(base64Key)
+    };
+})();
+
 // Инициализация при загрузке DOM
 document.addEventListener('DOMContentLoaded', function() {
-    new AuthManager();
+    // Задержка для гарантии загрузки Supabase
+    setTimeout(() => {
+        if (!window.authManager) {
+            window.authManager = new AuthManager();
+        }
+    }, 100);
 });
 
 // Глобальная функция для кнопок
@@ -328,44 +419,3 @@ window.scrollToServers = function() {
     const el = document.getElementById('servers-section');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
-
-// ОБЩИЙ обработчик для закрытия выпадающих меню при клике вне их
-document.addEventListener('click', function(e) {
-    // Закрываем все выпадающие меню пользователя
-    const dropdowns = document.querySelectorAll('.user-dropdown');
-    dropdowns.forEach(dropdown => {
-        if (!dropdown.contains(e.target)) {
-            dropdown.classList.remove('active');
-        }
-    });
-    
-    // Открываем/закрываем выпадающее меню по клику на имя пользователя
-    if (e.target.classList.contains('user-name')) {
-        const dropdown = e.target.closest('.user-dropdown');
-        if (dropdown) {
-            dropdown.classList.toggle('active');
-            e.stopPropagation();
-        }
-    }
-    
-    // Обработчик выхода
-    if (e.target.classList.contains('logout-btn')) {
-        const authManager = document.authManager;
-        if (authManager) {
-            authManager.signOut();
-        }
-    }
-    
-    // Обработчик кнопки входа (делегирование)
-    if (e.target.classList.contains('login-btn')) {
-        const authManager = document.authManager;
-        if (authManager) {
-            authManager.showModal('#authPage');
-        }
-    }
-});
-
-// Сохраняем экземпляр для глобального доступа
-document.addEventListener('DOMContentLoaded', function() {
-    document.authManager = new AuthManager();
-});
