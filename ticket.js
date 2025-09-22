@@ -30,12 +30,11 @@ class TicketPage {
     }
     
     async loadInitialData() {
-        // Загружаем основную информацию о тикете
         const { data: ticketData, error: ticketError } = await this.authManager.supabase
             .from('tickets')
             .select('description, created_at')
             .eq('id', this.ticketId)
-            .eq('user_id', this.user.id) // Проверка, что тикет принадлежит пользователю
+            .eq('user_id', this.user.id)
             .single();
 
         if (ticketError || !ticketData) {
@@ -46,7 +45,6 @@ class TicketPage {
 
         this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
         
-        // Загружаем сообщения
         const { data: messages, error: messagesError } = await this.authManager.supabase
             .from('messages')
             .select('content, created_at, user_id')
@@ -58,14 +56,7 @@ class TicketPage {
              return;
         }
         
-        // Отображаем первоначальное сообщение тикета и последующие сообщения
-        this.chatBox.innerHTML = ''; // Очищаем скелетоны
-        this.addMessageToBox({
-            content: ticketData.description,
-            created_at: ticketData.created_at,
-            user_id: this.user.id // Первое сообщение всегда от пользователя
-        });
-
+        this.chatBox.innerHTML = '';
         messages.forEach(msg => this.addMessageToBox(msg));
         this.scrollToBottom();
     }
@@ -123,8 +114,6 @@ class TicketPage {
                 table: 'messages',
                 filter: `ticket_id=eq.${this.ticketId}`
             }, (payload) => {
-                // Добавляем сообщение только если оно еще не на странице
-                // Это предотвратит дублирование при отправке своего же сообщения
                 if (payload.new.user_id !== this.user.id) {
                     this.addMessageToBox(payload.new);
                     this.scrollToBottom();
