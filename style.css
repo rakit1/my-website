@@ -23,9 +23,9 @@ body {
   color: var(--text);
   line-height: 1.45;
   scroll-behavior: smooth;
-  /* Стили для анимации перехода */
-  opacity: 0;
-  transition: opacity 0.5s ease-in-out;
+  /* УСКОРЕННАЯ АНИМАЦИЯ ПЕРЕХОДА */
+  opacity: 1; /* Убираем opacity 0, чтобы избежать мигания */
+  transition: opacity 0.25s ease-in-out;
 }
 
 body.fade-in {
@@ -36,6 +36,17 @@ body.fade-out {
     opacity: 0;
 }
 
+/* Анимация появления контента */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 /* Header */
 header {
@@ -190,6 +201,8 @@ nav a.active::after {
   align-items: center;
   gap: var(--gap);
   justify-content: space-between;
+  /* Анимация появления */
+  animation: fadeInUp 0.5s ease-out forwards;
 }
 
 .hero-text {
@@ -329,6 +342,7 @@ nav a.active::after {
   border-radius: 50%;
   background: var(--primary);
   animation: pulse 2s infinite;
+  transition: background-color 0.3s ease;
 }
 
 @keyframes pulse {
@@ -349,6 +363,9 @@ nav a.active::after {
 /* Features section */
 .features {
   margin: 100px 0;
+  /* Анимация появления */
+  animation: fadeInUp 0.5s 0.2s ease-out forwards;
+  opacity: 0;
 }
 
 .section-title {
@@ -398,6 +415,9 @@ nav a.active::after {
 /* Servers section */
 .servers {
   margin: 100px 0;
+    /* Анимация появления */
+  animation: fadeInUp 0.5s 0.4s ease-out forwards;
+  opacity: 0;
 }
 
 .server-cards {
@@ -476,8 +496,8 @@ nav a.active::after {
 }
 
 /* Auth modal */
-.auth-container {
-  display: none;
+.auth-container, .ip-modal {
+  display: flex; /* Используем flex для центрирования */
   justify-content: center;
   align-items: center;
   position: fixed;
@@ -485,22 +505,46 @@ nav a.active::after {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(15, 15, 18, 0.98);
+  background: rgba(15, 15, 18, 0.8); /* Чуть светлее фон */
   z-index: 1000;
   padding: 20px;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(8px);
+  
+  /* Анимация появления/скрытия */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-.auth-box {
-  background: rgba(255, 255, 255, 0.02);
+.auth-container.active, .ip-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.auth-box, .ip-modal-content {
+  background: rgba(25, 25, 28, 0.8); /* Фон чуть плотнее */
   border-radius: var(--radius);
   padding: 40px;
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   position: relative;
   text-align: center;
+  
+  /* Анимация появления/скрытия */
+  transform: scale(0.95) translateY(10px);
+  transition: transform 0.3s ease;
+}
+
+.auth-container.active .auth-box,
+.ip-modal.active .ip-modal-content {
+    transform: scale(1) translateY(0);
+}
+
+.ip-modal-content {
+    max-width: 450px;
+    padding: 30px;
 }
 
 .auth-title {
@@ -517,7 +561,7 @@ nav a.active::after {
   line-height: 1.5;
 }
 
-.close-auth {
+.close-auth, .close-ip-modal {
   position: absolute;
   top: 15px;
   right: 15px;
@@ -532,38 +576,12 @@ nav a.active::after {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-.close-auth:hover { 
+.close-auth:hover, .close-ip-modal:hover { 
   color: var(--text);
   background: rgba(255, 255, 255, 0.05);
-}
-
-/* IP modal */
-.ip-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(15, 15, 18, 0.98);
-  z-index: 1000;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
-  backdrop-filter: blur(5px);
-}
-
-.ip-modal-content {
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: var(--radius);
-  padding: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  width: 100%;
-  max-width: 450px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-  position: relative;
 }
 
 .ip-modal-title {
@@ -632,28 +650,6 @@ nav a.active::after {
 }
 
 .ip-btn.copied .copy-indicator { opacity: 1; }
-
-.close-ip-modal {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 1.5rem;
-  cursor: pointer;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-}
-
-.close-ip-modal:hover { 
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
-}
 
 /* Footer */
 footer {
@@ -746,7 +742,7 @@ footer {
   }
   
   .hero h1 {
-    font-size: 1.9rem;
+    font-size: 2.2rem; /* Оптимизация размера заголовка */
   }
   
   header {
@@ -812,6 +808,11 @@ footer {
   
   .auth-title {
     font-size: 1.5rem;
+  }
+
+  /* Оптимизация модальных окон на мобилках */
+  .auth-box, .ip-modal-content {
+    padding: 30px 20px;
   }
   
   .ip-modal-title {
