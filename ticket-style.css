@@ -6,10 +6,10 @@
 .ticket-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     margin-bottom: 30px;
     padding-bottom: 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    gap: 20px; /* ИСПРАВЛЕНО: Добавлен отступ */
 }
 
 .ticket-header h1 {
@@ -22,6 +22,7 @@
     text-decoration: none;
     font-weight: 500;
     transition: color 0.2s ease;
+    flex-shrink: 0;
 }
 
 .back-link:hover {
@@ -49,13 +50,13 @@
 
 .message p {
     margin: 0;
-    white-space: pre-wrap; /* Сохраняет переносы строк */
+    white-space: pre-wrap;
 }
 
 .message span {
     display: block;
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.7); /* Более светлый цвет для лучшей видимости */
+    color: rgba(255, 255, 255, 0.7);
     margin-top: 8px;
     opacity: 0.8;
 }
@@ -67,7 +68,7 @@
     align-self: flex-end;
 }
 .message.user span {
-    color: rgba(255, 255, 255, 0.8); /* Чуть светлее для контраста на синем фоне */
+    color: rgba(255, 255, 255, 0.8);
     text-align: right;
 }
 
@@ -80,7 +81,6 @@
 .message.admin span {
     text-align: left;
 }
-
 
 .message-form {
     margin-top: 20px;
@@ -98,7 +98,7 @@
     font-family: inherit;
     font-size: 1rem;
     resize: none;
-    height: 52px; /* Фикс высота */
+    height: 52px;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -109,10 +109,9 @@
 }
 
 .message-form button {
-    flex-shrink: 0; /* Чтобы кнопка не сжималась */
+    flex-shrink: 0;
 }
 
-/* Стили для кнопки "Закрыть тикет" */
 .btn-secondary {
     background: rgba(255, 255, 255, 0.05);
     color: var(--text);
@@ -136,7 +135,6 @@
     cursor: not-allowed;
 }
 
-
 .error-message {
     text-align: center;
     color: #eb445a;
@@ -154,7 +152,6 @@
     width: 50%;
 }
 
-/* СТИЛИ ДЛЯ НОВОГО МОДАЛЬНОГО ОКНА ПОДТВЕРЖДЕНИЯ */
 .confirmation-modal {
     position: fixed;
     top: 0;
