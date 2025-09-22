@@ -15,22 +15,19 @@
 <header>
   <div class="logo">
     <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
-      <rect x="1" y="1" width="22" height="22" rx="6" fill="#111"/>
-      <circle cx="8.5" cy="10.5" r="3.3" fill="#635bff"/>
-      <circle cx="15.5" cy="13.7" r="2.2" fill="#f6f7fb" opacity="0.06"/>
+        <rect x="1" y="1" width="22" height="22" rx="6" fill="#111"/>
+        <circle cx="8.5" cy="10.5" r="3.3" fill="#635bff"/>
+        <circle cx="15.5" cy="13.7" r="2.2" fill="#f6f7fb" opacity="0.06"/>
     </svg>
     MYPROJECT
   </div>
-
   <nav>
     <a href="index.html">Главная</a>
     <a href="#">Как играть</a>
     <a href="support.html" class="active">Поддержка</a>
   </nav>
-
   <div id="userSection">
     </div>
-
   <button class="mobile-menu-btn" aria-label="Открыть меню">
     <span></span>
     <span></span>
@@ -43,7 +40,6 @@
     <div class="support-container">
         <h1 class="support-title">Поддержка</h1>
         <p class="support-description">Ваш никнейм Discord будет прикреплен к заявке автоматически. Опишите проблему, и мы свяжемся с вами.</p>
-        
         <form id="ticket-form" class="ticket-form">
             <div class="form-group">
                 <label for="description">Опишите вашу проблему</label>
@@ -57,6 +53,7 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
 <script src="support.js"></script>
 </body>
 </html>
