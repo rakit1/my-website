@@ -7,6 +7,11 @@ class TicketPage {
         this.chatBox = document.getElementById('chat-box');
         this.messageForm = document.getElementById('message-form');
         this.ticketTitle = document.getElementById('ticket-title');
+        this.messageTextarea = this.messageForm.querySelector('textarea[name="message"]'); // Добавлено
+        this.sendMessageButton = this.messageForm.querySelector('button[type="submit"]'); // Добавлено
+        this.closeTicketButton = document.getElementById('close-ticket-btn'); // Добавлено
+
+        this.isTicketClosed = false; // Состояние тикета
 
         this.init();
     }
@@ -21,7 +26,7 @@ class TicketPage {
 
         if (user) {
             this.user = user;
-            this.loadInitialData();
+            await this.loadInitialData(); // Ожидаем загрузку данных
             this.setupEventListeners();
             this.subscribeToMessages();
         } else {
@@ -32,7 +37,7 @@ class TicketPage {
     async loadInitialData() {
         const { data: ticketData, error: ticketError } = await this.authManager.supabase
             .from('tickets')
-            .select('description, created_at')
+            .select('description, created_at, is_closed') // ИЗМЕНЕНИЕ 3: Получаем статус is_closed
             .eq('id', this.ticketId)
             .eq('user_id', this.user.id)
             .single();
@@ -44,6 +49,10 @@ class TicketPage {
         }
 
         this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
+        this.isTicketClosed = ticketData.is_closed; // Обновляем состояние тикета
+
+        // ИЗМЕНЕНИЕ 3: Обновляем UI в зависимости от статуса тикета
+        this.updateTicketUI();
         
         const { data: messages, error: messagesError } = await this.authManager.supabase
             .from('messages')
@@ -82,27 +91,95 @@ class TicketPage {
     setupEventListeners() {
         this.messageForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const content = this.messageForm.elements.message.value.trim();
+            const content = this.messageTextarea.value.trim();
             if (!content) return;
+            if (this.isTicketClosed) return; // Не отправляем, если тикет закрыт
 
-            const submitButton = this.messageForm.querySelector('button');
-            submitButton.disabled = true;
+            this.sendMessageButton.disabled = true;
+            this.sendMessageButton.textContent = 'Отправка...';
 
-            const { error } = await this.authManager.supabase
-                .from('messages')
-                .insert({
-                    ticket_id: this.ticketId,
-                    user_id: this.user.id,
-                    content: content
-                });
+            try {
+                const { data, error } = await this.authManager.supabase
+                    .from('messages')
+                    .insert({
+                        ticket_id: this.ticketId,
+                        user_id: this.user.id,
+                        content: content
+                    })
+                    .select() // ИЗМЕНЕНИЕ 2: Запрашиваем вставленные данные
+                    .single();
 
-            if (error) {
-                alert('Ошибка отправки сообщения: ' + error.message);
-            } else {
+                if (error) throw error;
+                
+                // ИЗМЕНЕНИЕ 2: Мгновенное отображение отправленного сообщения
+                this.addMessageToBox(data);
+                this.scrollToBottom();
                 this.messageForm.reset();
+
+            } catch (error) {
+                alert('Ошибка отправки сообщения: ' + error.message);
+            } finally {
+                this.sendMessageButton.disabled = false;
+                this.sendMessageButton.textContent = 'Отправить';
             }
-            submitButton.disabled = false;
         });
+
+        // ИЗМЕНЕНИЕ 3: Обработчик для кнопки закрытия тикета
+        if (this.closeTicketButton) {
+            this.closeTicketButton.addEventListener('click', () => this.handleCloseTicket());
+        }
+    }
+
+    // ИЗМЕНЕНИЕ 3: Функция для обновления UI в зависимости от статуса тикета
+    updateTicketUI() {
+        if (this.isTicketClosed) {
+            this.messageTextarea.disabled = true;
+            this.messageTextarea.placeholder = 'Тикет закрыт. Отправка сообщений недоступна.';
+            this.sendMessageButton.disabled = true;
+            this.sendMessageButton.textContent = 'Тикет закрыт';
+            if (this.closeTicketButton) {
+                this.closeTicketButton.disabled = true;
+                this.closeTicketButton.textContent = 'Закрыто';
+            }
+        } else {
+            this.messageTextarea.disabled = false;
+            this.messageTextarea.placeholder = 'Введите ваше сообщение...';
+            this.sendMessageButton.disabled = false;
+            this.sendMessageButton.textContent = 'Отправить';
+            if (this.closeTicketButton) {
+                this.closeTicketButton.disabled = false;
+                this.closeTicketButton.textContent = 'Закрыть тикет';
+            }
+        }
+    }
+
+    // ИЗМЕНЕНИЕ 3: Функция для закрытия тикета
+    async handleCloseTicket() {
+        if (!confirm('Вы уверены, что хотите закрыть этот тикет? Вы больше не сможете отправлять сообщения.')) {
+            return;
+        }
+
+        this.closeTicketButton.disabled = true;
+        this.closeTicketButton.textContent = 'Закрытие...';
+
+        try {
+            const { error } = await this.authManager.supabase
+                .from('tickets')
+                .update({ is_closed: true })
+                .eq('id', this.ticketId)
+                .eq('user_id', this.user.id);
+
+            if (error) throw error;
+
+            this.isTicketClosed = true;
+            this.updateTicketUI();
+            alert('Тикет успешно закрыт.');
+
+        } catch (error) {
+            alert('Ошибка при закрытии тикета: ' + error.message);
+            this.closeTicketButton.disabled = false;
+            this.closeTicketButton.textContent = 'Закрыть тикет';
+        }
     }
 
     subscribeToMessages() {
@@ -114,10 +191,10 @@ class TicketPage {
                 table: 'messages',
                 filter: `ticket_id=eq.${this.ticketId}`
             }, (payload) => {
-                if (payload.new.user_id !== this.user.id) {
-                    this.addMessageToBox(payload.new);
-                    this.scrollToBottom();
-                }
+                // ИЗМЕНЕНИЕ 2: Удалена проверка payload.new.user_id !== this.user.id
+                // Теперь сообщения пользователя также будут добавляться через подписку
+                this.addMessageToBox(payload.new);
+                this.scrollToBottom();
             })
             .subscribe();
     }
