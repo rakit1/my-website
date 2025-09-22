@@ -12,7 +12,7 @@ class AccountPage {
 
         if (user) {
             this.user = user;
-            this.displayUserProfile();
+            this.displayUserProfile(); // Теперь эта функция асинхронная
             this.fetchAndDisplayTickets();
             document.body.addEventListener('click', (e) => {
                 if (e.target.closest('.logout-btn')) {
@@ -24,19 +24,38 @@ class AccountPage {
         }
     }
 
-    displayUserProfile() {
+    async displayUserProfile() {
         if (!this.user || !this.profileCard) return;
 
         const name = this.user.user_metadata?.full_name || 'Пользователь';
         const email = this.user.email;
         const avatarUrl = this.user.user_metadata?.avatar_url;
 
+        // Получаем роль из нашей новой таблицы profiles
+        let userRole = 'Игрок'; // Роль по умолчанию
+        try {
+            const { data, error } = await this.authManager.supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', this.user.id)
+                .single();
+
+            if (error) throw error;
+            if (data) userRole = data.role;
+        } catch (error) {
+            console.error('Ошибка при получении роли пользователя:', error.message);
+        }
+        
+        // Определяем класс для стилизации роли
+        const roleClass = userRole === 'Администратор' ? 'administrator' : 'player';
+
         this.profileCard.innerHTML = `
             <div class="profile-avatar">
                 ${avatarUrl ? `<img src="${avatarUrl}" alt="Аватар">` : name.charAt(0).toUpperCase()}
             </div>
             <h1 class="profile-name">${name}</h1>
-            <p class.profile-email">${email}</p>
+            <span class="user-role ${roleClass}">${userRole}</span>
+            <p class="profile-email">${email}</p>
         `;
     }
 
