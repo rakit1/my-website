@@ -89,6 +89,13 @@ class TicketPage {
     }
 
     setupEventListeners() {
+        // ИСПРАВЛЕНИЕ: Добавлен обработчик для кнопки выхода
+        document.body.addEventListener('click', (e) => {
+            if (e.target.closest('.logout-btn')) {
+                this.authManager.signOut();
+            }
+        });
+
         this.messageForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const content = this.messageTextarea.value.trim();
@@ -97,7 +104,6 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
 
             try {
-                // ИСПРАВЛЕНО: Теперь мы получаем отправленное сообщение обратно
                 const { data, error } = await this.authManager.supabase
                     .from('messages')
                     .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content })
@@ -106,7 +112,6 @@ class TicketPage {
 
                 if (error) throw error;
                 
-                // ИСПРАВЛЕНО: И сразу же добавляем его в чат, не дожидаясь ответа от сервера
                 this.addMessageToBox(data);
                 this.scrollToBottom();
                 this.messageForm.reset();
@@ -177,8 +182,6 @@ class TicketPage {
                 table: 'messages',
                 filter: `ticket_id=eq.${this.ticketId}`
             }, (payload) => {
-                // ИСПРАВЛЕНО: Добавляем сообщение, только если оно пришло от другого пользователя,
-                // чтобы избежать дублирования (свое сообщение мы уже добавили сами)
                 if (payload.new.user_id !== this.user.id) {
                     this.addMessageToBox(payload.new);
                     this.scrollToBottom();
