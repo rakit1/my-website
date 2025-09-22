@@ -1,75 +1,38 @@
-class App {
+class AuthManager {
     constructor() {
-        // Ключи Supabase
         this.SUPABASE_URL = "https://egskxyxgzdidfbxhjaud.supabase.co";
         this.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw";
-        this.supabase = null;
-        this.waitForDependencies().then(() => this.init());
-    }
-
-    async waitForDependencies() {
-        return new Promise((resolve) => {
-            const check = () => {
-                if (typeof window.supabase !== 'undefined' && document.readyState !== 'loading') resolve();
-                else setTimeout(check, 100);
-            };
-            if (document.readyState === 'complete') check();
-            else document.addEventListener('DOMContentLoaded', check);
-        });
-    }
-
-    init() {
         this.supabase = window.supabase.createClient(this.SUPABASE_URL, this.SUPABASE_ANON_KEY);
-        this.setupEventListeners();
-        this.checkAuth();
-        this.supabase.auth.onAuthStateChange(() => this.updateUserUI());
-    }
-
-    setupEventListeners() {
-        document.body.addEventListener('click', (e) => {
-            if (e.target.closest('.mobile-menu-btn')) this.toggleMobileMenu();
-            if (e.target.closest('.login-btn')) this.showModal('#authPage');
-            if (e.target.closest('#discordSignIn')) this.signInWithDiscord();
-            if (e.target.closest('.server-join-btn')) this.handleServerJoin();
-            if (e.target.closest('.ip-btn')) this.copyIP(e.target.closest('.ip-btn'));
-            if (e.target.closest('.logout-btn')) this.signOut();
-
-            const modal = e.target.closest('.auth-container, .ip-modal');
-            if (e.target.closest('.close-auth, .close-ip-modal') || e.target === modal) {
-                this.hideModal(modal);
-            }
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                document.querySelectorAll('.auth-container, .ip-modal').forEach(modal => this.hideModal(modal));
-            }
+        
+        // Следим за состоянием авторизации и обновляем UI
+        this.supabase.auth.onAuthStateChange((event, session) => {
+            this.updateUserUI(session?.user);
         });
     }
-    
+
     async signInWithDiscord() {
-        const { error } = await this.supabase.auth.signInWithOAuth({
+        await this.supabase.auth.signInWithOAuth({
             provider: 'discord',
             options: { 
                 redirectTo: window.location.href,
                 scopes: 'identify email'
             }
         });
-        if (error) console.error('Ошибка входа через Discord:', error);
     }
 
     async signOut() {
-        const { error } = await this.supabase.auth.signOut();
-        if (error) console.error('Ошибка выхода:', error);
+        await this.supabase.auth.signOut();
+        // После выхода на любой странице, перенаправляем на главную
+        window.location.href = 'index.html';
     }
 
-    async updateUserUI() {
+    async updateUserUI(user) {
         const userSection = document.getElementById('userSection');
         if (!userSection) return;
-        const { data: { user } } = await this.supabase.auth.getUser();
+
         if (user) {
-            const name = this.escapeHtml(user.user_metadata?.full_name || user.email || 'Пользователь');
-            const avatarUrl = this.escapeHtml(user.user_metadata?.avatar_url);
+            const name = user.user_metadata?.full_name || user.email || 'Пользователь';
+            const avatarUrl = user.user_metadata?.avatar_url;
             userSection.innerHTML = `
                 <div class="user-info">
                     <div class="user-dropdown">
@@ -92,18 +55,68 @@ class App {
         }
     }
     
-    // ... (остальные функции без изменений) ...
-    async checkAuth() { await this.updateUserUI(); }
-    toggleMobileMenu() { const nav = document.querySelector('nav'); nav.classList.toggle('active'); this.toggleOverlay(nav.classList.contains('active')); }
-    toggleOverlay(show) { let overlay = document.querySelector('.nav-overlay'); if (show && !overlay) { overlay = document.createElement('div'); overlay.className = 'nav-overlay'; overlay.style.cssText = `position: fixed; top: 70px; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 98;`; document.body.appendChild(overlay); overlay.addEventListener('click', () => this.toggleMobileMenu()); } else if (!show && overlay) { overlay.remove(); } }
-    showModal(selector) { const modal = document.querySelector(selector); if (modal) { modal.style.display = 'flex'; modal.setAttribute('aria-hidden', 'false'); } }
-    hideModal(modal) { if (typeof modal === 'string') modal = document.querySelector(modal); if (modal && modal.style.display !== 'none') { modal.style.display = 'none'; modal.setAttribute('aria-hidden', 'true'); } }
-    async handleServerJoin() { const { data: { user } } = await this.supabase.auth.getUser(); if (user) { this.showModal('#ipModal'); } else { this.showModal('#authPage'); } }
-    async copyIP(button) { const ip = button.dataset.ip; if (!ip) return; try { await navigator.clipboard.writeText(ip); button.classList.add('copied'); setTimeout(() => button.classList.remove('copied'), 1500); } catch (err) { console.error('Не удалось скопировать IP: ', err); alert('Не удалось скопировать IP. Скопируйте вручную: ' + ip); } }
-    escapeHtml(unsafe) { if (!unsafe) return ''; return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
+    escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
 }
 
-const app = new App();
+
+class MainPage {
+    constructor(authManager) {
+        this.authManager = authManager;
+        this.init();
+    }
+    
+    init() {
+        this.setupEventListeners();
+        // При загрузке страницы, сразу проверяем статус
+        this.authManager.supabase.auth.getSession().then(({ data: { session } }) => {
+            this.authManager.updateUserUI(session?.user);
+        });
+    }
+
+    setupEventListeners() {
+        document.body.addEventListener('click', (e) => {
+            if (e.target.closest('.mobile-menu-btn')) this.toggleMobileMenu();
+            if (e.target.closest('.login-btn')) this.showModal('#authPage');
+            if (e.target.closest('#discordSignIn')) this.authManager.signInWithDiscord();
+            if (e.target.closest('.server-join-btn')) this.handleServerJoin();
+            if (e.target.closest('.ip-btn')) this.copyIP(e.target.closest('.ip-btn'));
+            if (e.target.closest('.logout-btn')) this.authManager.signOut();
+
+            const modal = e.target.closest('.auth-container, .ip-modal');
+            if (e.target.closest('.close-auth, .close-ip-modal') || e.target === modal) {
+                this.hideModal(modal);
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.auth-container, .ip-modal').forEach(modal => this.hideModal(modal));
+            }
+        });
+    }
+    
+    async handleServerJoin() {
+        const { data: { user } } = await this.authManager.supabase.auth.getUser();
+        if (user) this.showModal('#ipModal');
+        else this.showModal('#authPage');
+    }
+
+    // Вспомогательные функции, уникальные для главной страницы
+    toggleMobileMenu() { const nav = document.querySelector('nav'); nav.classList.toggle('active'); this.toggleOverlay(nav.classList.contains('active')); }
+    toggleOverlay(show) { let overlay = document.querySelector('.nav-overlay'); if (show && !overlay) { overlay = document.createElement('div'); overlay.className = 'nav-overlay'; overlay.style.cssText = `position: fixed; top: 70px; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 98;`; document.body.appendChild(overlay); overlay.addEventListener('click', () => this.toggleMobileMenu()); } else if (!show && overlay) { overlay.remove(); } }
+    showModal(selector) { const modal = document.querySelector(selector); if (modal) { modal.style.display = 'flex'; } }
+    hideModal(modal) { if (typeof modal === 'string') modal = document.querySelector(modal); if (modal) { modal.style.display = 'none'; } }
+    async copyIP(button) { const ip = button.dataset.ip; if (!ip) return; try { await navigator.clipboard.writeText(ip); button.classList.add('copied'); setTimeout(() => button.classList.remove('copied'), 1500); } catch (err) { alert('Не удалось скопировать IP. Скопируйте вручную: ' + ip); } }
+}
+
+// Запускаем приложение для главной страницы
+document.addEventListener('DOMContentLoaded', () => {
+    const authManager = new AuthManager();
+    new MainPage(authManager);
+});
 
 window.scrollToServers = function() {
     document.getElementById('servers-section')?.scrollIntoView({ behavior: 'smooth' });
