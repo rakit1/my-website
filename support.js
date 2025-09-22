@@ -8,58 +8,50 @@ class SupportPage {
         this.form = document.getElementById('ticket-form');
         this.feedbackDiv = document.getElementById('form-feedback');
         
-        this.init();
+        document.addEventListener('DOMContentLoaded', () => this.init());
     }
 
     async init() {
-        // 1. Инициализируем Supabase
         this.supabase = window.supabase.createClient(this.SUPABASE_URL, this.SUPABASE_ANON_KEY);
 
-        // 2. Проверяем, авторизован ли пользователь
         const { data: { user } } = await this.supabase.auth.getUser();
         if (!user) {
-            // Если нет — выгоняем на главную
             window.location.href = 'index.html';
-            return; // Прекращаем выполнение скрипта
+            return;
         }
         this.user = user;
         
-        // 3. Отображаем информацию о пользователе в шапке
         this.updateUserUI();
-
-        // 4. Настраиваем обработчик для формы
         this.form.addEventListener('submit', (e) => this.handleSubmit(e));
     }
 
     async handleSubmit(event) {
-        event.preventDefault(); // Предотвращаем перезагрузку страницы
+        event.preventDefault();
         
-        const username = this.form.elements.username.value;
         const description = this.form.elements.description.value;
         const submitButton = this.form.querySelector('button[type="submit"]');
+
+        // Получаем имена из метаданных пользователя
+        const displayName = this.user.user_metadata?.full_name || 'Неизвестно';
+        const uniqueUsername = this.user.user_metadata?.user_name || 'Неизвестно';
 
         submitButton.disabled = true;
         submitButton.textContent = 'Отправка...';
 
         try {
-            // Отправляем данные в таблицу 'tickets' в Supabase
             const { error } = await this.supabase
                 .from('tickets')
                 .insert([
                     { 
-                        username: username, 
                         description: description,
-                        // Важно: привязываем тикет к ID пользователя, который его создал!
+                        username: displayName, // Отображаемое имя
+                        discord_username: uniqueUsername, // Уникальный юзернейм
                         user_id: this.user.id 
                     }
                 ]);
 
-            if (error) {
-                // Если Supabase вернул ошибку, показываем ее
-                throw error;
-            }
+            if (error) throw error;
 
-            // Если все успешно
             this.showFeedback('Ваше обращение успешно отправлено!', 'success');
             this.form.reset();
 
@@ -83,24 +75,62 @@ class SupportPage {
     }
 
     updateUserUI() {
-        // Эта функция дублирует логику из основного script.js для отображения
-        // пользователя в шапке на этой отдельной странице.
         const userSection = document.getElementById('userSection');
         if (!userSection || !this.user) return;
 
         const name = this.user.user_metadata?.full_name || this.user.email;
         const avatarUrl = this.user.user_metadata?.avatar_url;
+        
         userSection.innerHTML = `
             <div class="user-info">
                 <div class="user-avatar" title="${name}">
                     ${avatarUrl ? `<img src="${avatarUrl}" alt="Аватар" style="width:100%;height:100%;border-radius:50%;">` : name.charAt(0).toUpperCase()}
                 </div>
-                <span class="user-name">${name}</span>
+                <div class="user-dropdown">
+                    <span class="user-name">${name}</span>
+                    <div class="dropdown-menu">
+                        <button class="logout-btn">Выйти</button>
+                    </div>
+                </div>
             </div>`;
+        
+        this.setupUserMenuListeners(userSection);
+    }
+
+    setupUserMenuListeners(userSection) {
+        const userNameElem = userSection.querySelector('.user-name');
+        const dropdown = userSection.querySelector('.user-dropdown');
+        const logoutBtn = userSection.querySelector('.logout-btn');
+
+        if (userNameElem) {
+            userNameElem.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdown.classList.toggle('active');
+            });
+        }
+        
+        if(logoutBtn) {
+            logoutBtn.addEventListener('click', () => this.handleLogout());
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!dropdown.contains(e.target)) {
+                dropdown.classList.remove('active');
+            }
+        });
+    }
+
+    async handleLogout() {
+        const { error } = await this.supabase.auth.signOut();
+        if (error) {
+            console.error('Ошибка при выходе:', error.message);
+            alert('Не удалось выйти. Попробуйте еще раз.');
+        } else {
+            // Успешный выход, перенаправляем на главную
+            window.location.href = 'index.html';
+        }
     }
 }
 
-// Запускаем скрипт после загрузки страницы
-document.addEventListener('DOMContentLoaded', () => {
-    new SupportPage();
-});
+// Запускаем приложение для страницы поддержки
+new SupportPage();
