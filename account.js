@@ -14,6 +14,12 @@ class AccountPage {
             this.user = user;
             this.displayUserProfile();
             this.fetchAndDisplayTickets();
+            // Добавляем обработчик для кнопки выхода
+            document.body.addEventListener('click', (e) => {
+                if (e.target.closest('.logout-btn')) {
+                    this.authManager.signOut();
+                }
+            });
         } else {
             // Если пользователь не авторизован, перенаправляем на главную
             window.location.href = 'index.html';
@@ -40,9 +46,10 @@ class AccountPage {
         if (!this.user || !this.ticketsList) return;
 
         try {
+            // Теперь запрашиваем и ID тикета
             const { data, error } = await this.authManager.supabase
                 .from('tickets')
-                .select('description, created_at')
+                .select('id, description, created_at')
                 .eq('user_id', this.user.id)
                 .order('created_at', { ascending: false });
 
@@ -53,11 +60,20 @@ class AccountPage {
                     const date = new Date(ticket.created_at).toLocaleDateString('ru-RU', {
                         day: 'numeric', month: 'long', year: 'numeric'
                     });
+                    // Оборачиваем карточку в ссылку
                     return `
-                        <div class="ticket-card">
-                            <p class="ticket-description">${ticket.description}</p>
-                            <span class="ticket-date">Создано: ${date}</span>
-                        </div>
+                        <a href="ticket.html?id=${ticket.id}" class="ticket-card-link">
+                            <div class="ticket-card">
+                                <div>
+                                    <span class="ticket-id">Тикет #${ticket.id}</span>
+                                    <p class="ticket-description">${ticket.description}</p>
+                                </div>
+                                <div class="ticket-footer">
+                                    <span class="ticket-date">Создано: ${date}</span>
+                                    <span class="open-ticket-btn">Посмотреть</span>
+                                </div>
+                            </div>
+                        </a>
                     `;
                 }).join('');
             } else {
