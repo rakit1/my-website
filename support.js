@@ -26,8 +26,15 @@ class SupportPage {
             if (e.target.closest('.logout-btn')) {
                 this.authManager.signOut();
             }
+            // ИСПРАВЛЕНИЕ 1: Перенаправление на главную при закрытии модального окна
             if (e.target.closest('.close-auth') || e.target === this.loginPromptModal) {
                 this.loginPromptModal.classList.remove('active');
+                if (!this.user) { // Если пользователь не авторизован
+                    document.body.classList.add('fade-out');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 250);
+                }
             }
         });
 
