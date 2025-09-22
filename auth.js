@@ -17,8 +17,7 @@ class AuthManager {
         await this.supabase.auth.signInWithOAuth({
             provider: 'discord',
             options: { 
-                // ИЗМЕНЕНИЕ ЗДЕСЬ: Указываем точный адрес твоего сайта
-                redirectTo: 'https://cbworlds.netlify.app/',
+                redirectTo: window.location.origin,
                 scopes: 'identify email'
             }
         });
