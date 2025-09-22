@@ -6,6 +6,33 @@ class MainPage {
     
     init() {
         this.setupEventListeners();
+        this.updateOnlineCount(); // Запускаем обновление онлайна при загрузке
+        setInterval(() => this.updateOnlineCount(), 60000); // Обновляем каждую минуту
+    }
+
+    async updateOnlineCount() {
+        const serverIp = "cbworlds.aboba.host"; // <--- ТВОЙ IP УЖЕ ЗДЕСЬ
+        const onlineCountElement = document.getElementById('online-count');
+        const onlineDotElement = document.querySelector('.online-dot');
+
+        if (!onlineCountElement) return;
+
+        try {
+            const response = await fetch(`https://api.mcsrvstat.us/2/${serverIp}`);
+            const data = await response.json();
+
+            if (data.online) {
+                onlineCountElement.textContent = data.players.online;
+                onlineDotElement.style.background = 'var(--primary)'; // Зеленый, если онлайн
+            } else {
+                onlineCountElement.textContent = 'Оффлайн';
+                onlineDotElement.style.background = '#eb445a'; // Красный, если оффлайн
+            }
+        } catch (error) {
+            console.error("Ошибка при получении онлайна:", error);
+            onlineCountElement.textContent = 'Ошибка';
+            onlineDotElement.style.background = '#eb445a';
+        }
     }
 
     setupEventListeners() {
