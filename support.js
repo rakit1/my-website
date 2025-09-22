@@ -4,22 +4,45 @@ class SupportPage {
         this.user = null;
         this.form = document.getElementById('ticket-form');
         this.feedbackDiv = document.getElementById('form-feedback');
+        
+        // Элементы для модального окна
+        this.supportContent = document.getElementById('support-content');
+        this.loginPromptModal = document.getElementById('login-prompt');
+        this.promptLoginBtn = document.getElementById('prompt-login-btn');
+
         this.init();
     }
 
     async init() {
         const { data: { user } } = await this.authManager.supabase.auth.getUser();
-        if (!user) {
-            window.location.href = 'index.html';
-            return;
-        }
-        this.user = user;
         
-        this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+        if (user) {
+            this.user = user;
+            this.setupAuthenticatedView();
+        } else {
+            this.setupGuestView();
+        }
+        
         document.body.addEventListener('click', (e) => {
             if (e.target.closest('.logout-btn')) {
                 this.authManager.signOut();
             }
+        });
+    }
+
+    // Показываем форму поддержки для залогиненного пользователя
+    setupAuthenticatedView() {
+        this.supportContent.style.display = 'block';
+        this.loginPromptModal.style.display = 'none';
+        this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+    }
+
+    // Показываем окно с просьбой войти для гостя
+    setupGuestView() {
+        this.supportContent.style.display = 'none';
+        this.loginPromptModal.style.display = 'flex';
+        this.promptLoginBtn.addEventListener('click', () => {
+            this.authManager.signInWithDiscord();
         });
     }
 
