@@ -11,27 +11,30 @@ class MainPage {
     }
 
     async updateOnlineCount() {
-        const serverIp = "cbworlds.aboba.host"; // <--- ТВОЙ IP УЖЕ ЗДЕСЬ
-        const onlineCountElement = document.getElementById('online-count');
+        const serverIp = "cbworlds.aboba.host"; // Твой IP
+        const heroOnlineElement = document.getElementById('online-count');
+        const cardOnlineElement = document.getElementById('server-card-online');
         const onlineDotElement = document.querySelector('.online-dot');
-
-        if (!onlineCountElement) return;
 
         try {
             const response = await fetch(`https://api.mcsrvstat.us/2/${serverIp}`);
             const data = await response.json();
 
             if (data.online) {
-                onlineCountElement.textContent = data.players.online;
-                onlineDotElement.style.background = 'var(--primary)'; // Зеленый, если онлайн
+                const onlineText = data.players.online;
+                if (heroOnlineElement) heroOnlineElement.textContent = onlineText;
+                if (cardOnlineElement) cardOnlineElement.textContent = `${onlineText} онлайн`;
+                if (onlineDotElement) onlineDotElement.style.background = 'var(--primary)'; // Зеленый
             } else {
-                onlineCountElement.textContent = 'Оффлайн';
-                onlineDotElement.style.background = '#eb445a'; // Красный, если оффлайн
+                if (heroOnlineElement) heroOnlineElement.textContent = 'Оффлайн';
+                if (cardOnlineElement) cardOnlineElement.textContent = `Оффлайн`;
+                if (onlineDotElement) onlineDotElement.style.background = '#eb445a'; // Красный
             }
         } catch (error) {
             console.error("Ошибка при получении онлайна:", error);
-            onlineCountElement.textContent = 'Ошибка';
-            onlineDotElement.style.background = '#eb445a';
+            if (heroOnlineElement) heroOnlineElement.textContent = 'Ошибка';
+            if (cardOnlineElement) cardOnlineElement.textContent = 'Ошибка';
+            if (onlineDotElement) onlineDotElement.style.background = '#eb445a';
         }
     }
 
