@@ -40,6 +40,30 @@
   margin: 0 0 10px 0;
 }
 
+/* СТИЛИ ДЛЯ РОЛИ ПОЛЬЗОВАТЕЛЯ */
+.user-role {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.user-role.administrator {
+    background: linear-gradient(45deg, var(--primary), #a259ff);
+    color: white;
+    box-shadow: 0 4px 15px rgba(120, 91, 255, 0.2);
+}
+
+.user-role.player {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--muted);
+}
+/* КОНЕЦ СТИЛЕЙ ДЛЯ РОЛИ */
+
 .profile-email {
   color: var(--muted);
   font-size: 1rem;
