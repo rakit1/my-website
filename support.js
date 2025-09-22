@@ -1,7 +1,7 @@
 class SupportPage {
     constructor() {
         this.SUPABASE_URL = "https://egskxyxgzdidfbxhjaud.supabase.co";
-        this.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw";
+        this.SUPABASE_ANON_KEY = "eyJhbGciOiJIJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw";
         this.supabase = null;
         this.user = null;
 
@@ -21,9 +21,6 @@ class SupportPage {
         }
         this.user = user;
         
-        // ВОТ ЭТА СТРОЧКА! Она покажет нам всю информацию о пользователе.
-        console.log('User data from Supabase:', this.user);
-
         this.updateUserUI();
         this.form.addEventListener('submit', (e) => this.handleSubmit(e));
     }
@@ -34,8 +31,8 @@ class SupportPage {
         const description = this.form.elements.description.value;
         const submitButton = this.form.querySelector('button[type="submit"]');
 
+        // ИЗМЕНЕНИЕ: Теперь мы берем ОБЫЧНОЕ имя и используем его для обоих полей
         const displayName = this.user.user_metadata?.full_name || 'Неизвестно';
-        const uniqueUsername = this.user.user_metadata?.user_name || 'Неизвестно';
 
         submitButton.disabled = true;
         submitButton.textContent = 'Отправка...';
@@ -46,8 +43,8 @@ class SupportPage {
                 .insert([
                     { 
                         description: description,
-                        username: displayName,
-                        discord_username: uniqueUsername,
+                        username: displayName, 
+                        discord_username: displayName, // Используем обычное имя и здесь
                         user_id: this.user.id 
                     }
                 ]);
@@ -84,7 +81,7 @@ class SupportPage {
         const avatarUrl = this.user.user_metadata?.avatar_url;
         
         userSection.innerHTML = `
-            <div class="user-info">
+            <div class.user-info">
                 <div class="user-avatar" title="${name}">
                     ${avatarUrl ? `<img src="${avatarUrl}" alt="Аватар" style="width:100%;height:100%;border-radius:50%;">` : name.charAt(0).toUpperCase()}
                 </div>
