@@ -17,7 +17,8 @@ class AuthManager {
         await this.supabase.auth.signInWithOAuth({
             provider: 'discord',
             options: { 
-                redirectTo: window.location.href,
+                // ИЗМЕНЕНИЕ ЗДЕСЬ: Указываем точный адрес твоего сайта
+                redirectTo: 'https://cbworlds.netlify.app/',
                 scopes: 'identify email'
             }
         });
@@ -28,7 +29,7 @@ class AuthManager {
         setTimeout(async () => {
             await this.supabase.auth.signOut();
             window.location.href = 'index.html';
-        }, 500);
+        }, 250);
     }
 
     updateUserUI(user) {
