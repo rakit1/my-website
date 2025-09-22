@@ -14,14 +14,12 @@ class AccountPage {
             this.user = user;
             this.displayUserProfile();
             this.fetchAndDisplayTickets();
-            // Добавляем обработчик для кнопки выхода
             document.body.addEventListener('click', (e) => {
                 if (e.target.closest('.logout-btn')) {
                     this.authManager.signOut();
                 }
             });
         } else {
-            // Если пользователь не авторизован, перенаправляем на главную
             window.location.href = 'index.html';
         }
     }
@@ -38,7 +36,7 @@ class AccountPage {
                 ${avatarUrl ? `<img src="${avatarUrl}" alt="Аватар">` : name.charAt(0).toUpperCase()}
             </div>
             <h1 class="profile-name">${name}</h1>
-            <p class="profile-email">${email}</p>
+            <p class.profile-email">${email}</p>
         `;
     }
 
@@ -46,10 +44,9 @@ class AccountPage {
         if (!this.user || !this.ticketsList) return;
 
         try {
-            // Теперь запрашиваем и ID тикета
             const { data, error } = await this.authManager.supabase
                 .from('tickets')
-                .select('id, description, created_at')
+                .select('id, description, created_at, is_closed')
                 .eq('user_id', this.user.id)
                 .order('created_at', { ascending: false });
 
@@ -60,7 +57,11 @@ class AccountPage {
                     const date = new Date(ticket.created_at).toLocaleDateString('ru-RU', {
                         day: 'numeric', month: 'long', year: 'numeric'
                     });
-                    // Оборачиваем карточку в ссылку
+                    
+                    const statusIndicator = ticket.is_closed 
+                        ? '<span class="ticket-status closed">Закрыт</span>' 
+                        : '<span class="open-ticket-btn">Посмотреть</span>';
+
                     return `
                         <a href="ticket.html?id=${ticket.id}" class="ticket-card-link">
                             <div class="ticket-card">
@@ -70,7 +71,7 @@ class AccountPage {
                                 </div>
                                 <div class="ticket-footer">
                                     <span class="ticket-date">Создано: ${date}</span>
-                                    <span class="open-ticket-btn">Посмотреть</span>
+                                    ${statusIndicator}
                                 </div>
                             </div>
                         </a>
