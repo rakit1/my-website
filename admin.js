@@ -39,9 +39,9 @@ class AdminPage {
             const { data, error } = await this.authManager.supabase
                 .from('tickets')
                 .select(`
-                    id, 
-                    description, 
-                    created_at, 
+                    id,
+                    description,
+                    created_at,
                     is_closed,
                     profiles ( username )
                 `)
@@ -55,8 +55,8 @@ class AdminPage {
                         day: 'numeric', month: 'long', year: 'numeric'
                     });
                     
-                    const statusIndicator = ticket.is_closed 
-                        ? '<span class="ticket-status closed">Закрыт</span>' 
+                    const statusIndicator = ticket.is_closed
+                        ? '<span class="ticket-status closed">Закрыт</span>'
                         : '<span class="open-ticket-btn">Ответить</span>';
 
                     const authorUsername = ticket.profiles?.username || 'Неизвестный пользователь';
