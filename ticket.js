@@ -40,7 +40,7 @@ class TicketPage {
             this.user = user;
             await this.loadInitialData();
             this.setupEventListeners();
-            this.subscribeToMessages(); // ← ЗАМЕНИЛИ POLLING НА REALTIME ПОДПИСКУ
+            this.subscribeToMessages(); // Подписываемся на Realtime обновления
         } else {
             window.location.href = 'index.html';
         }
@@ -151,13 +151,20 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
 
             try {
-                const { error } = await this.supabase
+                // ИЗМЕНЕНИЕ: Мы снова получаем отправленное сообщение, чтобы сразу его показать
+                const { data: newMessage, error } = await this.supabase
                     .from('messages')
-                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content });
+                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content })
+                    .select()
+                    .single();
 
                 if (error) throw error;
-                
+
+                // ИЗМЕНЕНИЕ: Моментально добавляем СВОЁ сообщение на экран
+                this.addMessageToBox(newMessage);
+                this.scrollToBottom();
                 this.messageForm.reset();
+
             } catch (error) {
                 alert('Ошибка отправки сообщения: ' + error.message);
             } finally {
@@ -190,7 +197,11 @@ class TicketPage {
                 }, 
                 async (payload) => {
                     const newMessage = payload.new;
-                    // Если мы еще не знаем автора, загрузим его данные
+                    // Игнорируем свое же сообщение, т.к. мы его уже показали
+                    if (newMessage.user_id === this.user.id) {
+                        return;
+                    }
+
                     if (!this.participants.has(newMessage.user_id)) {
                         const { data: profile } = await this.supabase
                             .from('profiles')
@@ -246,7 +257,7 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
             this.closeTicketButton.disabled = true;
             this.closeTicketButton.textContent = 'Тикет закрыт';
-            this.destroy(); // Отписываемся от обновлений, если тикет закрыт
+            this.destroy(); 
         }
     }
 
