@@ -35,16 +35,8 @@ class AdminPage {
         if (!this.ticketsListContainer) return;
 
         try {
-            const { data, error } = await this.authManager.supabase
-                .from('tickets')
-                .select(`
-                    id,
-                    description,
-                    created_at,
-                    is_closed,
-                    profiles ( username )
-                `)
-                .order('created_at', { ascending: false });
+            // ИЗМЕНЕНИЕ: Используем безопасную RPC функцию для админов
+            const { data, error } = await this.authManager.supabase.rpc('get_all_tickets_for_admin');
 
             if (error) throw error;
 
