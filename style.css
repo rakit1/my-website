@@ -1077,15 +1077,21 @@ button,
 /* === КОНЕЦ СТИЛЕЙ СКРОЛЛБАРА === */
 
 /* === СТИЛИ ДЛЯ БЕТА-ПРЕДУПРЕЖДЕНИЯ === */
-/* ИСПРАВЛЕНИЕ: Стили только для крестика */
-#betaWarningModal .close-auth {
+/* ИСПРАВЛЕНИЕ: Задаем стили для крестика отдельно, чтобы он не был кнопкой */
+#betaWarningModal .close-beta-warning[aria-label="Закрыть"] {
     position: absolute;
     top: 15px;
     right: 15px;
+    line-height: 1;
+    /* Сбрасываем стили от класса .btn */
+    padding: 0;
+    min-height: auto;
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
 
-/* ИСПРАВЛЕНИЕ: Стили для кнопки "Я понимаю" */
-#betaWarningModal .btn {
+/* Стили для кнопки "Я понимаю" */
+#betaWarningModal .btn.close-beta-warning {
     margin-top: 10px;
-    /* Убираем абсолютное позиционирование отсюда */
 }
