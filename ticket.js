@@ -1,49 +1,59 @@
 class TicketPage {
     constructor(authManager) {
         this.authManager = authManager;
+        this.supabase = authManager.supabase;
         this.user = null;
         this.ticketId = new URLSearchParams(window.location.search).get('id');
         this.isCurrentUserAdmin = false;
+        this.isTicketClosed = false;
+        this.channel = null;
+
+        // Кэш для данных пользователей (чтобы не запрашивать одно и то же)
         this.participants = new Map();
-        
+
+        // Элементы DOM
         this.chatBox = document.getElementById('chat-box');
         this.messageForm = document.getElementById('message-form');
         this.ticketTitle = document.getElementById('ticket-title');
         this.messageTextarea = this.messageForm.querySelector('textarea[name="message"]');
         this.sendMessageButton = this.messageForm.querySelector('button[type="submit"]');
         this.closeTicketButton = document.getElementById('close-ticket-btn');
-
         this.confirmationModal = document.getElementById('confirmation-modal');
         this.confirmCloseBtn = document.getElementById('confirm-close-btn');
         this.cancelCloseBtn = document.getElementById('cancel-close-btn');
 
-        this.isTicketClosed = false;
-        this.channel = null; // Для хранения подписки
-
         this.init();
     }
 
+    /**
+     * Главная функция инициализации страницы
+     */
     async init() {
         if (!this.ticketId) {
             window.location.href = 'account.html';
             return;
         }
 
-        const { data: { user } } = await this.authManager.supabase.auth.getUser();
+        const { data: { user } } = await this.supabase.auth.getUser();
 
         if (user) {
             this.user = user;
             await this.loadInitialData();
             this.setupEventListeners();
-            this.subscribeToMessages();
+            this.subscribeToRealtimeMessages();
         } else {
             window.location.href = 'index.html';
         }
     }
-    
+
+    /**
+     * Загружает все необходимые данные при открытии страницы:
+     * информацию о тикете, сообщения и данные пользователей.
+     */
     async loadInitialData() {
         try {
-            const { data: profile } = await this.authManager.supabase
+            // 1. Получаем профиль текущего пользователя и проверяем, админ ли он
+            const { data: profile } = await this.supabase
                 .from('profiles')
                 .select('role, username, avatar_url')
                 .eq('id', this.user.id)
@@ -54,37 +64,40 @@ class TicketPage {
                 this.participants.set(this.user.id, profile);
             }
 
-            let ticketQuery = this.authManager.supabase
+            // 2. Получаем данные о самом тикете (и проверяем доступ)
+            const { data: ticketData, error: ticketError } = await this.supabase
                 .from('tickets')
                 .select('user_id, is_closed')
-                .eq('id', this.ticketId);
+                .eq('id', this.ticketId)
+                .single();
 
-            if (!this.isCurrentUserAdmin) {
-                ticketQuery = ticketQuery.eq('user_id', this.user.id);
+            if (ticketError || (!this.isCurrentUserAdmin && ticketData.user_id !== this.user.id)) {
+                throw new Error("Не удалось найти тикет или у вас нет к нему доступа.");
             }
-
-            const { data: ticketData, error: ticketError } = await ticketQuery.single();
-            if (ticketError) throw new Error("Не удалось найти тикет или у вас нет к нему доступа.");
-
-            this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
+            
             this.isTicketClosed = ticketData.is_closed;
+            this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
             this.updateTicketUI();
 
-            const { data: messages, error: messagesError } = await this.authManager.supabase
+            // 3. Загружаем все сообщения и профили их авторов
+            const { data: messages, error: messagesError } = await this.supabase
                 .from('messages')
-                .select(`*, profiles(username, avatar_url, role)`) // Запрашиваем все поля, включая ID
+                .select(`*, profiles(username, avatar_url, role)`)
                 .eq('ticket_id', this.ticketId)
                 .order('created_at');
 
             if (messagesError) throw messagesError;
             
-            this.chatBox.innerHTML = '';
+            // Кэшируем данные авторов, чтобы не делать лишних запросов
             messages.forEach(msg => {
                 if (msg.profiles && !this.participants.has(msg.user_id)) {
                     this.participants.set(msg.user_id, msg.profiles);
                 }
-                this.addMessageToBox(msg);
             });
+
+            // 4. Отображаем сообщения в чате
+            this.chatBox.innerHTML = '';
+            messages.forEach(msg => this.addMessageToBox(msg));
             this.scrollToBottom();
 
         } catch (error) {
@@ -94,8 +107,12 @@ class TicketPage {
         }
     }
 
+    /**
+     * Отображает одно сообщение в окне чата.
+     * @param {object} message - Объект сообщения из Supabase.
+     */
     addMessageToBox(message) {
-        // Проверяем, есть ли сообщение уже в чате, чтобы избежать дублирования
+        // Проверка, чтобы не дублировать сообщения от Realtime
         if (document.querySelector(`[data-message-id="${message.id}"]`)) {
             return;
         }
@@ -106,7 +123,7 @@ class TicketPage {
 
         const wrapper = document.createElement('div');
         wrapper.className = `message-wrapper ${isUserMessage ? 'user' : 'admin'}`;
-        wrapper.dataset.messageId = message.id; // Добавляем ID для проверки на дубликаты
+        wrapper.dataset.messageId = message.id;
         
         const date = new Date(message.created_at).toLocaleString('ru-RU');
         
@@ -129,15 +146,12 @@ class TicketPage {
         this.chatBox.appendChild(wrapper);
     }
     
-    scrollToBottom() {
-        this.chatBox.scrollTop = this.chatBox.scrollHeight;
-    }
-
+    /**
+     * Настраивает все обработчики событий (отправка, закрытие тикета).
+     */
     setupEventListeners() {
-        document.body.addEventListener('click', (e) => {
-            if (e.target.closest('.logout-btn')) this.authManager.signOut();
-        });
-
+        // --- ГЛАВНОЕ ИСПРАВЛЕНИЕ ---
+        // Обработчик отправки формы
         this.messageForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const content = this.messageTextarea.value.trim();
@@ -146,18 +160,29 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
 
             try {
-                const { error } = await this.authManager.supabase
+                // Отправляем сообщение и сразу просим вернуть его с помощью .select().single()
+                const { data: newMessage, error } = await this.supabase
                     .from('messages')
-                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content });
+                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content })
+                    .select()
+                    .single();
+
                 if (error) throw error;
+                
+                // Не ждем Realtime, а сразу же отображаем свое сообщение
+                this.addMessageToBox(newMessage);
+                this.scrollToBottom();
                 this.messageForm.reset();
+
             } catch (error) {
                 alert('Ошибка отправки сообщения: ' + error.message);
             } finally {
                 this.sendMessageButton.disabled = false;
+                this.messageTextarea.focus();
             }
         });
 
+        // Обработчики для закрытия тикета
         this.closeTicketButton.addEventListener('click', () => {
             if (!this.isTicketClosed) this.confirmationModal.classList.add('active');
         });
@@ -169,11 +194,47 @@ class TicketPage {
         this.confirmCloseBtn.addEventListener('click', () => this.executeTicketClosure());
     }
 
+    /**
+     * Подписывается на события Realtime для получения новых сообщений.
+     */
+    subscribeToRealtimeMessages() {
+        if (this.channel) {
+            this.supabase.removeChannel(this.channel);
+        }
+
+        this.channel = this.supabase.channel(`messages_ticket_${this.ticketId}`);
+        
+        this.channel.on(
+            'postgres_changes', 
+            { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${this.ticketId}`},
+            async (payload) => {
+                // Если пришло сообщение от другого пользователя, его данных у нас может не быть
+                if (!this.participants.has(payload.new.user_id)) {
+                    const { data: profile } = await this.supabase.from('profiles').select('username, avatar_url, role').eq('id', payload.new.user_id).single();
+                    if (profile) {
+                        this.participants.set(payload.new.user_id, profile);
+                    }
+                }
+                this.addMessageToBox(payload.new);
+                this.scrollToBottom();
+            }
+        ).subscribe((status, err) => {
+            if (status === 'SUBSCRIBED') {
+                console.log('Успешная подписка на обновления чата!');
+            } else if (err) {
+                console.error('Ошибка подписки на Realtime:', err);
+            }
+        });
+    }
+
+    /**
+     * Выполняет закрытие тикета.
+     */
     async executeTicketClosure() {
         this.confirmCloseBtn.disabled = true;
         this.confirmCloseBtn.textContent = 'Закрытие...';
         try {
-            const { error } = await this.authManager.supabase.from('tickets').update({ is_closed: true }).eq('id', this.ticketId);
+            const { error } = await this.supabase.from('tickets').update({ is_closed: true }).eq('id', this.ticketId);
             if (error) throw error;
             this.isTicketClosed = true;
             this.updateTicketUI();
@@ -186,10 +247,10 @@ class TicketPage {
         }
     }
 
+    /**
+     * Обновляет интерфейс (кнопки, поля ввода) в зависимости от статуса тикета.
+     */
     updateTicketUI() {
-        const canClose = this.isCurrentUserAdmin || !this.isTicketClosed;
-        this.closeTicketButton.style.display = canClose ? 'inline-flex' : 'none';
-
         if (this.isTicketClosed) {
             this.messageTextarea.disabled = true;
             this.messageTextarea.placeholder = 'Тикет закрыт. Отправка сообщений недоступна.';
@@ -205,32 +266,11 @@ class TicketPage {
         }
     }
 
-    subscribeToMessages() {
-        if (this.channel) {
-            this.authManager.supabase.removeChannel(this.channel);
-        }
-
-        this.channel = this.authManager.supabase.channel(`messages_ticket_${this.ticketId}`);
-        
-        this.channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${this.ticketId}`},
-            async (payload) => {
-                if (!this.participants.has(payload.new.user_id)) {
-                    const { data: profile } = await this.authManager.supabase.from('profiles').select('username, avatar_url, role').eq('id', payload.new.user_id).single();
-                    if (profile) {
-                        this.participants.set(payload.new.user_id, profile);
-                    }
-                }
-                this.addMessageToBox(payload.new);
-                this.scrollToBottom();
-            })
-            .subscribe((status, err) => {
-                if (status === 'SUBSCRIBED') {
-                    console.log('Успешно подписан на обновления чата!');
-                }
-                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-                    console.error('Ошибка подписки:', err);
-                }
-            });
+    /**
+     * Прокручивает чат в самый низ.
+     */
+    scrollToBottom() {
+        this.chatBox.scrollTop = this.chatBox.scrollHeight;
     }
 }
 
