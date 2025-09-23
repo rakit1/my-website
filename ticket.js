@@ -18,6 +18,7 @@ class TicketPage {
         this.cancelCloseBtn = document.getElementById('cancel-close-btn');
 
         this.isTicketClosed = false;
+        this.channel = null; // Для хранения подписки
 
         this.init();
     }
@@ -139,13 +140,15 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
 
             try {
-                // Отправляем сообщение и не делаем ничего с ответом.
-                // Подписка (subscribe) обработает отображение для всех.
+                // Отправляем сообщение. Подписка сама его получит и отобразит.
                 const { error } = await this.authManager.supabase
                     .from('messages')
                     .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content });
+                
                 if (error) throw error;
+                
                 this.messageForm.reset();
+
             } catch (error) {
                 alert('Ошибка отправки сообщения: ' + error.message);
             } finally {
@@ -201,9 +204,13 @@ class TicketPage {
     }
 
     subscribeToMessages() {
-        this.authManager.supabase
-            .channel(`messages_ticket_${this.ticketId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${this.ticketId}`},
+        if (this.channel) {
+            this.authManager.supabase.removeChannel(this.channel);
+        }
+
+        this.channel = this.authManager.supabase.channel(`messages_ticket_${this.ticketId}`);
+        
+        this.channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${this.ticketId}`},
             async (payload) => {
                 // Если мы еще не знаем профиль автора, загружаем его
                 if (!this.participants.has(payload.new.user_id)) {
@@ -215,11 +222,12 @@ class TicketPage {
                 this.addMessageToBox(payload.new);
                 this.scrollToBottom();
             })
-            .subscribe((status) => {
+            .subscribe((status, err) => {
                 if (status === 'SUBSCRIBED') {
                     console.log('Успешно подписан на обновления чата!');
-                } else {
-                    console.log('Статус подписки:', status);
+                }
+                if (status === 'CHANNEL_ERROR') {
+                    console.error('Ошибка подписки:', err);
                 }
             });
     }
