@@ -48,17 +48,14 @@ class MainPage {
 
     setupEventListeners() {
         document.body.addEventListener('click', (e) => {
-            // Стандартные обработчики
-            if (e.target.closest('.mobile-menu-btn')) this.toggleMobileMenu();
+            // Обработчики, специфичные для главной страницы
             if (e.target.closest('.login-btn')) this.showModal('#authPage');
             if (e.target.closest('#discordSignIn')) this.authManager.signInWithDiscord();
             if (e.target.closest('.server-join-btn')) this.handleServerJoin();
             if (e.target.closest('.ip-btn')) this.copyIP(e.target.closest('.ip-btn'));
             if (e.target.closest('.logout-btn')) this.authManager.signOut();
 
-            // --- ИСПРАВЛЕННАЯ ЛОГИКА ЗАКРЫТИЯ МОДАЛЬНЫХ ОКОН ---
-
-            // 1. Закрытие по нажатию на крестик
+            // --- Логика закрытия модальных окон ---
             if (e.target.closest('.close-auth, .close-ip-modal')) {
                 const modal = e.target.closest('.auth-container, .ip-modal');
                 if (modal) {
@@ -69,13 +66,11 @@ class MainPage {
                 }
             }
 
-            // 2. Закрытие по нажатию на кнопку "Я понимаю" в бета-окне
             if (e.target.closest('.close-beta-warning-btn')) {
                 this.hideModal('#betaWarningModal');
                 sessionStorage.setItem('betaWarningShown', 'true');
             }
 
-            // 3. Закрытие по клику на темный фон
             const activeModal = document.querySelector('.auth-container.active, .ip-modal.active');
             if (activeModal && e.target === activeModal) {
                 this.hideModal(activeModal);
@@ -103,9 +98,6 @@ class MainPage {
         if (user) this.showModal('#ipModal');
         else this.showModal('#authPage');
     }
-
-    toggleMobileMenu() { const nav = document.querySelector('nav'); nav.classList.toggle('active'); this.toggleOverlay(nav.classList.contains('active')); }
-    toggleOverlay(show) { let overlay = document.querySelector('.nav-overlay'); if (show && !overlay) { overlay = document.createElement('div'); overlay.className = 'nav-overlay'; overlay.style.cssText = `position: fixed; top: 70px; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 98;`; document.body.appendChild(overlay); overlay.addEventListener('click', () => this.toggleMobileMenu()); } else if (!show && overlay) { overlay.remove(); } }
     
     showModal(selector) {
         const modal = typeof selector === 'string' ? document.querySelector(selector) : selector;
