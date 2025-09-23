@@ -44,16 +44,13 @@ class TicketPage {
         try {
             const { data: profile } = await this.authManager.supabase
                 .from('profiles')
-                .select('role, username')
+                .select('role, username, avatar_url')
                 .eq('id', this.user.id)
                 .single();
             
             if (profile) {
                 this.isCurrentUserAdmin = profile.role === 'Администратор';
-                this.participants.set(this.user.id, {
-                    username: profile.username || this.user.user_metadata.full_name,
-                    avatar_url: this.user.user_metadata.avatar_url
-                });
+                this.participants.set(this.user.id, profile);
             }
 
             let ticketQuery = this.authManager.supabase
@@ -75,17 +72,19 @@ class TicketPage {
 
             const { data: messages, error: messagesError } = await this.authManager.supabase
                 .from('messages')
-                .select(`user_id, content, created_at`)
+                .select(`user_id, content, created_at, profiles(username, avatar_url)`)
                 .eq('ticket_id', this.ticketId)
                 .order('created_at');
 
             if (messagesError) throw messagesError;
             
-            const userIds = [...new Set(messages.map(msg => msg.user_id))];
-            await this.fetchParticipants(userIds);
-
             this.chatBox.innerHTML = '';
-            messages.forEach(msg => this.addMessageToBox(msg));
+            messages.forEach(msg => {
+                if (!this.participants.has(msg.user_id)) {
+                    this.participants.set(msg.user_id, msg.profiles);
+                }
+                this.addMessageToBox(msg);
+            });
             this.scrollToBottom();
 
         } catch (error) {
@@ -93,28 +92,6 @@ class TicketPage {
             this.messageForm.style.display = 'none';
             this.closeTicketButton.style.display = 'none';
         }
-    }
-
-    async fetchParticipants(userIds) {
-        const idsToFetch = userIds.filter(id => !this.participants.has(id));
-        if (idsToFetch.length === 0) return;
-
-        const { data: profiles, error } = await this.authManager.supabase
-            .from('profiles')
-            .select('id, username, avatar_url')
-            .in('id', idsToFetch);
-
-        if (error) {
-            console.error("Ошибка при загрузке профилей:", error);
-            return;
-        }
-
-        profiles.forEach(p => {
-            this.participants.set(p.id, {
-                username: p.username,
-                avatar_url: p.avatar_url // Предполагаем, что аватарка теперь тоже в профиле
-            });
-        });
     }
 
     addMessageToBox(message) {
@@ -160,11 +137,21 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
 
             try {
-                const { error } = await this.authManager.supabase
+                const { data: newMessage, error } = await this.authManager.supabase
                     .from('messages')
-                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content });
+                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content })
+                    .select()
+                    .single();
+
                 if (error) throw error;
+                
+                // --- ИСПРАВЛЕНИЕ ДЛЯ РЕАЛЬНОГО ВРЕМЕНИ ---
+                // Мы не ждем ответа от сервера, а сразу добавляем сообщение в чат
+                this.addMessageToBox(newMessage);
+                this.scrollToBottom();
                 this.messageForm.reset();
+                // -----------------------------------------
+
             } catch (error) {
                 alert('Ошибка отправки сообщения: ' + error.message);
             } finally {
@@ -224,9 +211,15 @@ class TicketPage {
             .channel(`messages_ticket_${this.ticketId}`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${this.ticketId}`},
             async (payload) => {
-                await this.fetchParticipants([payload.new.user_id]);
-                this.addMessageToBox(payload.new);
-                this.scrollToBottom();
+                // Добавляем сообщение, только если оно пришло от ДРУГОГО пользователя
+                if (payload.new.user_id !== this.user.id) {
+                    if (!this.participants.has(payload.new.user_id)) {
+                        const { data: profile } = await this.authManager.supabase.from('profiles').select('username, avatar_url').eq('id', payload.new.user_id).single();
+                        this.participants.set(payload.new.user_id, profile);
+                    }
+                    this.addMessageToBox(payload.new);
+                    this.scrollToBottom();
+                }
             })
             .subscribe();
     }
