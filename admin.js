@@ -3,7 +3,6 @@ class AdminPage {
         this.authManager = authManager;
         this.user = null;
         this.ticketsListContainer = document.getElementById('all-tickets-list');
-        // ИЗМЕНЕНИЕ: Находим наш скрытый контейнер
         this.adminContainer = document.getElementById('admin-container'); 
         this.init();
     }
@@ -24,7 +23,6 @@ class AdminPage {
                 return;
             }
 
-            // ИЗМЕНЕНИЕ: Если проверка пройдена, показываем контейнер и загружаем тикеты
             this.adminContainer.style.display = 'block';
             this.fetchAllTickets();
 
