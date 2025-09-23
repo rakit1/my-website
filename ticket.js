@@ -194,7 +194,7 @@ class TicketPage {
             this.supabase.removeChannel(this.channel);
         }
 
-        this.channel = this.supabase.channel(`public:messages:ticket_id=eq.${this.ticketId}`);
+        this.channel = this.supabase.channel(`messages:ticket_id=eq.${this.ticketId}`);
         
         this.channel.on(
             'postgres_changes', 
