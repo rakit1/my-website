@@ -94,7 +94,6 @@
     color: var(--text);
 }
 
-/* ИСПРАВЛЕНО: Стиль для ника администратора */
 .message-author.admin-role {
     color: #e74c3c;
 }
