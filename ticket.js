@@ -79,7 +79,7 @@ class TicketPage {
             
             this.chatBox.innerHTML = '';
             messages.forEach(msg => {
-                if (!this.participants.has(msg.user_id)) {
+                if (msg.profiles && !this.participants.has(msg.user_id)) {
                     this.participants.set(msg.user_id, msg.profiles);
                 }
                 this.addMessageToBox(msg);
@@ -139,6 +139,8 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
 
             try {
+                // Мы отправляем сообщение и НЕ ждем ответа для отображения.
+                // За это теперь полностью отвечает подписка (subscribeToMessages).
                 const { error } = await this.authManager.supabase
                     .from('messages')
                     .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content });
@@ -203,18 +205,23 @@ class TicketPage {
             .channel(`messages_ticket_${this.ticketId}`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${this.ticketId}`},
             async (payload) => {
-                // --- ИСПРАВЛЕНИЕ ДЛЯ РЕАЛЬНОГО ВРЕМЕНИ ---
-                // Теперь мы просто добавляем любое новое сообщение, которое приходит по подписке.
+                // --- ГЛАВНОЕ ИСПРАВЛЕНИЕ ---
+                // Просто добавляем ЛЮБОЕ новое сообщение, которое приходит по подписке.
                 // Это будет работать и для отправителя, и для получателя.
                 if (!this.participants.has(payload.new.user_id)) {
                     const { data: profile } = await this.authManager.supabase.from('profiles').select('username, avatar_url, role').eq('id', payload.new.user_id).single();
-                    this.participants.set(payload.new.user_id, profile);
+                    if (profile) {
+                        this.participants.set(payload.new.user_id, profile);
+                    }
                 }
                 this.addMessageToBox(payload.new);
                 this.scrollToBottom();
-                // -----------------------------------------
             })
-            .subscribe();
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('Успешно подписан на обновления чата!');
+                }
+            });
     }
 }
 
