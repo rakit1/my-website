@@ -3,6 +3,8 @@ class AdminPage {
         this.authManager = authManager;
         this.user = null;
         this.ticketsListContainer = document.getElementById('all-tickets-list');
+        // ИЗМЕНЕНИЕ: Находим наш скрытый контейнер
+        this.adminContainer = document.getElementById('admin-container'); 
         this.init();
     }
 
@@ -11,7 +13,6 @@ class AdminPage {
 
         if (user) {
             this.user = user;
-            // Проверяем роль пользователя
             const { data: profile, error } = await this.authManager.supabase
                 .from('profiles')
                 .select('role')
@@ -19,15 +20,15 @@ class AdminPage {
                 .single();
 
             if (error || !profile || profile.role !== 'Администратор') {
-                // Если не админ, перенаправляем в личный кабинет
                 window.location.href = 'account.html';
                 return;
             }
 
-            // Если админ, загружаем все тикеты
+            // ИЗМЕНЕНИЕ: Если проверка пройдена, показываем контейнер и загружаем тикеты
+            this.adminContainer.style.display = 'block';
             this.fetchAllTickets();
+
         } else {
-            // Если не авторизован, перенаправляем на главную
             window.location.href = 'index.html';
         }
     }
@@ -55,8 +56,8 @@ class AdminPage {
                         day: 'numeric', month: 'long', year: 'numeric'
                     });
                     
-                    const statusIndicator = ticket.is_closed
-                        ? '<span class="ticket-status closed">Закрыт</span>'
+                    const statusIndicator = ticket.is_closed 
+                        ? '<span class="ticket-status closed">Закрыт</span>' 
                         : '<span class="open-ticket-btn">Ответить</span>';
 
                     const authorUsername = ticket.profiles?.username || 'Неизвестный пользователь';
