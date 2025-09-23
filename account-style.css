@@ -237,4 +237,21 @@
 @keyframes pulse-bg {
     0% { background-color: rgba(255, 255, 255, 0.03); }
     50% { background-color: rgba(255, 255, 255, 0.06); }
-    100% { background-color: rgba(255, 2
+    100% { background-color: rgba(255, 255, 255, 0.03); }
+}
+
+/* Стили для заголовка в админ-панели */
+.admin-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.admin-header .section-title {
+    margin-bottom: 0;
+}
+
+.admin-header .back-link {
+    white-space: nowrap;
+}
