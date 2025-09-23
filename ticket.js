@@ -32,7 +32,7 @@ class TicketPage {
             this.user = user;
             await this.loadInitialData();
             this.setupEventListeners();
-            this.subscribeToMessages();
+            this.subscribeToUpdates();
         } else {
             window.location.href = 'index.html';
         }
@@ -70,7 +70,6 @@ class TicketPage {
             if (messagesError) throw messagesError;
             
             messages.forEach(msg => {
-                // ИСПРАВЛЕНИЕ: Убрали JSON.parse(), так как msg.profiles - это уже готовый объект
                 if (msg.profiles && !this.participants.has(msg.user_id)) {
                     this.participants.set(msg.user_id, msg.profiles);
                 }
@@ -87,8 +86,7 @@ class TicketPage {
 
     addMessageToBox(message) {
         if (document.querySelector(`[data-message-id="${message.id}"]`)) return;
-
-        // ИСПРАВЛЕНИЕ: Убрали JSON.parse()
+        
         const authorProfile = this.participants.get(message.user_id) || message.profiles || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
         const isUserMessage = message.user_id === this.user.id;
         const isAdmin = authorProfile.role === 'Администратор';
@@ -134,16 +132,35 @@ class TicketPage {
         this.confirmCloseBtn.addEventListener('click', () => this.executeTicketClosure());
     }
 
-    subscribeToMessages() {
-        this.channel = this.supabase.channel(`ticket-${this.ticketId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${this.ticketId}` }, async (payload) => {
-            const newMessage = payload.new;
-            if (!this.participants.has(newMessage.user_id)) {
-                const { data: profile } = await this.supabase.from('profiles').select('username, avatar_url, role').eq('id', newMessage.user_id).single();
-                if (profile) this.participants.set(newMessage.user_id, profile);
-            }
-            this.addMessageToBox(newMessage);
-            this.scrollToBottom();
-        }).subscribe();
+    subscribeToUpdates() {
+        this.channel = this.supabase.channel(`ticket-updates-${this.ticketId}`)
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'messages', 
+                filter: `ticket_id=eq.${this.ticketId}` 
+            }, async (payload) => {
+                const newMessage = payload.new;
+                if (!this.participants.has(newMessage.user_id)) {
+                    const { data: profile } = await this.supabase.from('profiles').select('username, avatar_url, role').eq('id', newMessage.user_id).single();
+                    if (profile) this.participants.set(newMessage.user_id, profile);
+                }
+                this.addMessageToBox(newMessage);
+                this.scrollToBottom();
+            })
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'tickets',
+                filter: `id=eq.${this.ticketId}`
+            }, (payload) => {
+                const updatedTicket = payload.new;
+                if (updatedTicket.is_closed && !this.isTicketClosed) {
+                    this.isTicketClosed = true;
+                    this.updateTicketUI();
+                }
+            })
+            .subscribe();
     }
 
     destroy() {
@@ -155,8 +172,7 @@ class TicketPage {
         try {
             const { error } = await this.supabase.from('tickets').update({ is_closed: true }).eq('id', this.ticketId);
             if (error) throw error;
-            this.isTicketClosed = true;
-            this.updateTicketUI();
+            // Статус обновится через Realtime, локально менять не нужно для консистентности
             this.confirmationModal.classList.remove('active');
         } catch (error) {
             alert('Ошибка при закрытии тикета: ' + error.message);
@@ -166,6 +182,13 @@ class TicketPage {
     }
 
     updateTicketUI() {
+        // Показываем кнопку "Закрыть тикет" только админам
+        if (this.isCurrentUserAdmin) {
+            this.closeTicketButton.style.display = 'inline-flex';
+        } else {
+            this.closeTicketButton.style.display = 'none';
+        }
+
         if (this.isTicketClosed) {
             this.messageTextarea.disabled = true;
             this.messageTextarea.placeholder = 'Тикет закрыт. Отправка сообщений недоступна.';
