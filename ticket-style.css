@@ -93,6 +93,12 @@
     font-weight: 600;
     color: var(--text);
 }
+
+/* ИСПРАВЛЕНО: Стиль для ника администратора */
+.message-author.admin-role {
+    color: #e74c3c;
+}
+
 .message-wrapper.user .message-header { flex-direction: row-reverse; }
 
 .message {
