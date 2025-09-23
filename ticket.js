@@ -18,7 +18,7 @@ class TicketPage {
         this.cancelCloseBtn = document.getElementById('cancel-close-btn');
 
         this.isTicketClosed = false;
-        this.channel = null; // Для хранения подписки
+        this.channel = null;
 
         this.init();
     }
@@ -72,7 +72,7 @@ class TicketPage {
 
             const { data: messages, error: messagesError } = await this.authManager.supabase
                 .from('messages')
-                .select(`user_id, content, created_at, profiles(username, avatar_url, role)`)
+                .select(`*, profiles(username, avatar_url, role)`)
                 .eq('ticket_id', this.ticketId)
                 .order('created_at');
 
@@ -95,12 +95,15 @@ class TicketPage {
     }
 
     addMessageToBox(message) {
+        if (document.querySelector(`[data-message-id="${message.id}"]`)) return;
+
         const authorProfile = this.participants.get(message.user_id) || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
         const isUserMessage = message.user_id === this.user.id;
         const isAdmin = authorProfile.role === 'Администратор';
 
         const wrapper = document.createElement('div');
         wrapper.className = `message-wrapper ${isUserMessage ? 'user' : 'admin'}`;
+        wrapper.dataset.messageId = message.id;
         
         const date = new Date(message.created_at).toLocaleString('ru-RU');
         
@@ -140,12 +143,10 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
 
             try {
-                // Отправляем сообщение. Подписка сама его получит и отобразит для всех.
                 const { error } = await this.authManager.supabase
                     .from('messages')
                     .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content });
                 if (error) throw error;
-                
                 this.messageForm.reset();
             } catch (error) {
                 alert('Ошибка отправки сообщения: ' + error.message);
@@ -210,7 +211,6 @@ class TicketPage {
         
         this.channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${this.ticketId}`},
             async (payload) => {
-                // Если мы еще не знаем профиль автора, загружаем его
                 if (!this.participants.has(payload.new.user_id)) {
                     const { data: profile } = await this.authManager.supabase.from('profiles').select('username, avatar_url, role').eq('id', payload.new.user_id).single();
                     if (profile) {
@@ -224,7 +224,7 @@ class TicketPage {
                 if (status === 'SUBSCRIBED') {
                     console.log('Успешно подписан на обновления чата!');
                 }
-                if (status === 'CHANNEL_ERROR') {
+                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
                     console.error('Ошибка подписки:', err);
                 }
             });
