@@ -18,7 +18,7 @@ class TicketPage {
         this.cancelCloseBtn = document.getElementById('cancel-close-btn');
 
         this.isTicketClosed = false;
-        this.channel = null;
+        this.channel = null; // Для хранения подписки
 
         this.init();
     }
@@ -72,7 +72,7 @@ class TicketPage {
 
             const { data: messages, error: messagesError } = await this.authManager.supabase
                 .from('messages')
-                .select(`*, profiles(username, avatar_url, role)`)
+                .select(`*, profiles(username, avatar_url, role)`) // Запрашиваем все поля, включая ID
                 .eq('ticket_id', this.ticketId)
                 .order('created_at');
 
@@ -95,7 +95,10 @@ class TicketPage {
     }
 
     addMessageToBox(message) {
-        if (document.querySelector(`[data-message-id="${message.id}"]`)) return;
+        // Проверяем, есть ли сообщение уже в чате, чтобы избежать дублирования
+        if (document.querySelector(`[data-message-id="${message.id}"]`)) {
+            return;
+        }
 
         const authorProfile = this.participants.get(message.user_id) || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
         const isUserMessage = message.user_id === this.user.id;
@@ -103,7 +106,7 @@ class TicketPage {
 
         const wrapper = document.createElement('div');
         wrapper.className = `message-wrapper ${isUserMessage ? 'user' : 'admin'}`;
-        wrapper.dataset.messageId = message.id;
+        wrapper.dataset.messageId = message.id; // Добавляем ID для проверки на дубликаты
         
         const date = new Date(message.created_at).toLocaleString('ru-RU');
         
