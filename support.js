@@ -26,10 +26,9 @@ class SupportPage {
             if (e.target.closest('.logout-btn')) {
                 this.authManager.signOut();
             }
-            // ИСПРАВЛЕНИЕ 1: Перенаправление на главную при закрытии модального окна
             if (e.target.closest('.close-auth') || e.target === this.loginPromptModal) {
                 this.loginPromptModal.classList.remove('active');
-                if (!this.user) { // Если пользователь не авторизован
+                if (!this.user) {
                     document.body.classList.add('fade-out');
                     setTimeout(() => {
                         window.location.href = 'index.html';
@@ -65,27 +64,29 @@ class SupportPage {
         }
 
         const submitButton = this.form.querySelector('button[type="submit"]');
-        const displayName = this.user.user_metadata?.full_name || 'Неизвестно';
         submitButton.disabled = true;
         submitButton.textContent = 'Отправка...';
         
         try {
-            const { data, error } = await this.authManager.supabase
+            // Создаем тикет
+            const { data: ticketData, error: ticketError } = await this.authManager.supabase
                 .from('tickets')
-                .insert([{ description: description, username: displayName, user_id: this.user.id }])
+                .insert([{ description: description, user_id: this.user.id }])
                 .select()
                 .single();
 
-            if (error) throw error;
+            if (ticketError) throw ticketError;
             
-            const newTicketId = data.id;
+            const newTicketId = ticketData.id;
 
+            // Сразу после создания тикета создаем первое сообщение
             const { error: messageError } = await this.authManager.supabase
                 .from('messages')
                 .insert([{ ticket_id: newTicketId, user_id: this.user.id, content: description }]);
                 
             if (messageError) throw messageError;
 
+            // Если все успешно, переходим на страницу тикета
             document.body.classList.add('fade-out');
             setTimeout(() => {
                 window.location.href = `ticket.html?id=${newTicketId}`;
