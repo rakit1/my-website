@@ -13,7 +13,6 @@ class MainPage {
 
     showBetaWarningOnce() {
         const modal = document.getElementById('betaWarningModal');
-        // Показываем окно, только если оно не было показано в этой сессии
         if (modal && !sessionStorage.getItem('betaWarningShown')) {
             this.showModal(modal);
         }
@@ -49,7 +48,7 @@ class MainPage {
 
     setupEventListeners() {
         document.body.addEventListener('click', (e) => {
-            // Обработчики для всех кнопок
+            // Стандартные обработчики
             if (e.target.closest('.mobile-menu-btn')) this.toggleMobileMenu();
             if (e.target.closest('.login-btn')) this.showModal('#authPage');
             if (e.target.closest('#discordSignIn')) this.authManager.signInWithDiscord();
@@ -57,25 +56,44 @@ class MainPage {
             if (e.target.closest('.ip-btn')) this.copyIP(e.target.closest('.ip-btn'));
             if (e.target.closest('.logout-btn')) this.authManager.signOut();
 
-            // ИСПРАВЛЕНИЕ: Логика закрытия модальных окон
-            const authModal = e.target.closest('.auth-container');
-            if (authModal) {
-                // Если кликнули на кнопку закрытия бета-окна (крестик или кнопку "Я понимаю")
-                if (e.target.closest('.close-beta-warning-btn') || (authModal.id === 'betaWarningModal' && e.target.closest('.close-auth'))) {
-                    this.hideModal(authModal);
-                    // Сразу же запоминаем, что окно было показано
+            // --- ИСПРАВЛЕННАЯ ЛОГИКА ЗАКРЫТИЯ МОДАЛЬНЫХ ОКОН ---
+
+            // 1. Закрытие по нажатию на крестик
+            if (e.target.closest('.close-auth, .close-ip-modal')) {
+                const modal = e.target.closest('.auth-container, .ip-modal');
+                if (modal) {
+                    this.hideModal(modal);
+                    if (modal.id === 'betaWarningModal') {
+                        sessionStorage.setItem('betaWarningShown', 'true');
+                    }
+                }
+            }
+
+            // 2. Закрытие по нажатию на кнопку "Я понимаю" в бета-окне
+            if (e.target.closest('.close-beta-warning-btn')) {
+                this.hideModal('#betaWarningModal');
+                sessionStorage.setItem('betaWarningShown', 'true');
+            }
+
+            // 3. Закрытие по клику на темный фон
+            const activeModal = document.querySelector('.auth-container.active, .ip-modal.active');
+            if (activeModal && e.target === activeModal) {
+                this.hideModal(activeModal);
+                if (activeModal.id === 'betaWarningModal') {
                     sessionStorage.setItem('betaWarningShown', 'true');
-                } 
-                // Логика для других модальных окон
-                else if (e.target.closest('.close-auth, .close-ip-modal') || e.target === authModal) {
-                    this.hideModal(authModal);
                 }
             }
         });
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                document.querySelectorAll('.auth-container.active').forEach(modal => this.hideModal(modal));
+                const activeModal = document.querySelector('.auth-container.active, .ip-modal.active');
+                if (activeModal) {
+                    this.hideModal(activeModal);
+                    if (activeModal.id === 'betaWarningModal') {
+                        sessionStorage.setItem('betaWarningShown', 'true');
+                    }
+                }
             }
         });
     }
