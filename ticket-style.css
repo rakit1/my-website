@@ -9,7 +9,7 @@
     margin-bottom: 30px;
     padding-bottom: 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    gap: 20px; /* ИСПРАВЛЕНО: Добавлен отступ */
+    gap: 20px;
 }
 
 .ticket-header h1 {
@@ -41,10 +41,63 @@
     gap: 15px;
 }
 
+/* СТИЛИ ДЛЯ СООБЩЕНИЙ В ЧАТЕ */
+.message-wrapper {
+    display: flex;
+    flex-direction: column;
+    max-width: 70%;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.message-wrapper.user { align-self: flex-end; }
+.message-wrapper.admin { align-self: flex-start; }
+
+.message-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.message-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.message-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.message-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.message-author {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+}
+.message-wrapper.user .message-header { flex-direction: row-reverse; }
+
 .message {
     padding: 12px 18px;
     border-radius: 18px;
-    max-width: 70%;
     line-height: 1.5;
 }
 
@@ -61,26 +114,26 @@
     opacity: 0.8;
 }
 
-.message.user {
+.message-wrapper.user .message {
     background-color: var(--primary);
     color: white;
     border-bottom-right-radius: 4px;
-    align-self: flex-end;
 }
-.message.user span {
+.message-wrapper.user span {
     color: rgba(255, 255, 255, 0.8);
     text-align: right;
 }
 
-.message.admin {
+.message-wrapper.admin .message {
     background-color: rgba(255, 255, 255, 0.05);
     color: var(--text);
     border-bottom-left-radius: 4px;
-    align-self: flex-start;
 }
-.message.admin span {
+.message-wrapper.admin span {
     text-align: left;
 }
+/* КОНЕЦ СТИЛЕЙ ДЛЯ СООБЩЕНИЙ */
+
 
 .message-form {
     margin-top: 20px;
