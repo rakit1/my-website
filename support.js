@@ -80,9 +80,15 @@ class SupportPage {
             const newTicketId = ticketData.id;
 
             // Сразу после создания тикета создаем первое сообщение
+            // ИСПРАВЛЕНИЕ: Добавили `ticket_owner_id`, указывая, что автор тикета - текущий пользователь
             const { error: messageError } = await this.authManager.supabase
                 .from('messages')
-                .insert([{ ticket_id: newTicketId, user_id: this.user.id, content: description }]);
+                .insert([{ 
+                    ticket_id: newTicketId, 
+                    user_id: this.user.id, 
+                    content: description,
+                    ticket_owner_id: this.user.id 
+                }]);
                 
             if (messageError) throw messageError;
 
