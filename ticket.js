@@ -44,11 +44,17 @@ class TicketPage {
         try {
             const { data: profile } = await this.authManager.supabase
                 .from('profiles')
-                .select('role')
+                .select('role, username')
                 .eq('id', this.user.id)
                 .single();
             
-            if (profile) this.isCurrentUserAdmin = profile.role === 'Администратор';
+            if (profile) {
+                this.isCurrentUserAdmin = profile.role === 'Администратор';
+                this.participants.set(this.user.id, {
+                    username: profile.username || this.user.user_metadata.full_name,
+                    avatar_url: this.user.user_metadata.avatar_url
+                });
+            }
 
             let ticketQuery = this.authManager.supabase
                 .from('tickets')
@@ -69,7 +75,7 @@ class TicketPage {
 
             const { data: messages, error: messagesError } = await this.authManager.supabase
                 .from('messages')
-                .select(`user_id, content, created_at, profiles(username)`)
+                .select(`user_id, content, created_at`)
                 .eq('ticket_id', this.ticketId)
                 .order('created_at');
 
@@ -90,16 +96,25 @@ class TicketPage {
     }
 
     async fetchParticipants(userIds) {
-        for (const id of userIds) {
-            if (!this.participants.has(id)) {
-                const { data: { user } } = await this.authManager.supabase.auth.getUserById(id);
-                const { data: profile } = await this.authManager.supabase.from('profiles').select('username').eq('id', id).single();
-                this.participants.set(id, {
-                    username: profile?.username || user?.user_metadata?.full_name || 'Пользователь',
-                    avatar_url: user?.user_metadata?.avatar_url
-                });
-            }
+        const idsToFetch = userIds.filter(id => !this.participants.has(id));
+        if (idsToFetch.length === 0) return;
+
+        const { data: profiles, error } = await this.authManager.supabase
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .in('id', idsToFetch);
+
+        if (error) {
+            console.error("Ошибка при загрузке профилей:", error);
+            return;
         }
+
+        profiles.forEach(p => {
+            this.participants.set(p.id, {
+                username: p.username,
+                avatar_url: p.avatar_url // Предполагаем, что аватарка теперь тоже в профиле
+            });
+        });
     }
 
     addMessageToBox(message) {
