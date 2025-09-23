@@ -4,7 +4,6 @@ class TicketPage {
         this.supabase = authManager.supabase;
         this.user = null;
         this.ticketId = new URLSearchParams(window.location.search).get('id');
-        this.ticketOwnerId = null; // <-- НОВОЕ: здесь будем хранить ID владельца тикета
         this.isCurrentUserAdmin = false;
         this.isTicketClosed = false;
         this.channel = null;
@@ -53,33 +52,27 @@ class TicketPage {
 
             const { data: ticketData, error: ticketError } = await this.supabase
                 .from('tickets')
-                .select('user_id, is_closed') // Запрашиваем ID владельца
+                .select('user_id, is_closed')
                 .eq('id', this.ticketId)
                 .single();
 
-            if (ticketError) throw ticketError;
-            
-            this.ticketOwnerId = ticketData.user_id; // <-- НОВОЕ: Сохраняем ID владельца тикета
-            
-            if (!this.isCurrentUserAdmin && this.ticketOwnerId !== this.user.id) {
-                 throw new Error("Не удалось найти тикет или у вас нет к нему доступа.");
+            if (ticketError || (!this.isCurrentUserAdmin && ticketData.user_id !== this.user.id)) {
+                throw new Error("Не удалось найти тикет или у вас нет к нему доступа.");
             }
 
             this.isTicketClosed = ticketData.is_closed;
             this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
             this.updateTicketUI();
-
+            
+            // ИЗМЕНЕНИЕ: Запрашиваем сообщения через нашу безопасную функцию
             const { data: messages, error: messagesError } = await this.supabase
-                .from('messages')
-                .select(`*, profiles(username, avatar_url, role)`)
-                .eq('ticket_id', this.ticketId)
-                .order('created_at');
+                .rpc('get_messages_for_ticket', { ticket_id_arg: this.ticketId });
 
             if (messagesError) throw messagesError;
             
             messages.forEach(msg => {
                 if (msg.profiles && !this.participants.has(msg.user_id)) {
-                    this.participants.set(msg.user_id, msg.profiles);
+                    this.participants.set(msg.user_id, JSON.parse(msg.profiles));
                 }
             });
 
@@ -94,7 +87,8 @@ class TicketPage {
 
     addMessageToBox(message) {
         if (document.querySelector(`[data-message-id="${message.id}"]`)) return;
-        const authorProfile = this.participants.get(message.user_id) || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
+
+        const authorProfile = this.participants.get(message.user_id) || JSON.parse(message.profiles) || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
         const isUserMessage = message.user_id === this.user.id;
         const isAdmin = authorProfile.role === 'Администратор';
         const wrapper = document.createElement('div');
@@ -116,21 +110,11 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
 
             try {
-                // <-- НОВОЕ: При отправке сообщения добавляем ticket_owner_id
-                const { data: newMessage, error } = await this.supabase
+                const { error } = await this.supabase
                     .from('messages')
-                    .insert({ 
-                        ticket_id: this.ticketId, 
-                        user_id: this.user.id, 
-                        content: content,
-                        ticket_owner_id: this.ticketOwnerId 
-                    })
-                    .select()
-                    .single();
+                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content });
 
                 if (error) throw error;
-                this.addMessageToBox(newMessage);
-                this.scrollToBottom();
                 this.messageForm.reset();
             } catch (error) {
                 alert('Ошибка отправки сообщения: ' + error.message);
@@ -152,7 +136,6 @@ class TicketPage {
     subscribeToMessages() {
         this.channel = this.supabase.channel(`ticket-${this.ticketId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${this.ticketId}` }, async (payload) => {
             const newMessage = payload.new;
-            if (newMessage.user_id === this.user.id) return;
             if (!this.participants.has(newMessage.user_id)) {
                 const { data: profile } = await this.supabase.from('profiles').select('username, avatar_url, role').eq('id', newMessage.user_id).single();
                 if (profile) this.participants.set(newMessage.user_id, profile);
