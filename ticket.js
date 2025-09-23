@@ -139,18 +139,12 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
 
             try {
-                // Отправляем сообщение в базу данных
-                const { data: newMessage, error } = await this.authManager.supabase
+                // Отправляем сообщение и не делаем ничего с ответом.
+                // Подписка (subscribe) обработает отображение для всех.
+                const { error } = await this.authManager.supabase
                     .from('messages')
-                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content })
-                    .select()
-                    .single();
-
+                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content });
                 if (error) throw error;
-                
-                // Сразу же отображаем наше сообщение, не дожидаясь подписки
-                this.addMessageToBox(newMessage);
-                this.scrollToBottom();
                 this.messageForm.reset();
             } catch (error) {
                 alert('Ошибка отправки сообщения: ' + error.message);
@@ -211,21 +205,21 @@ class TicketPage {
             .channel(`messages_ticket_${this.ticketId}`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${this.ticketId}`},
             async (payload) => {
-                // Получаем сообщения ТОЛЬКО от других пользователей
-                if (payload.new.user_id !== this.user.id) {
-                    if (!this.participants.has(payload.new.user_id)) {
-                        const { data: profile } = await this.authManager.supabase.from('profiles').select('username, avatar_url, role').eq('id', payload.new.user_id).single();
-                        if (profile) {
-                            this.participants.set(payload.new.user_id, profile);
-                        }
+                // Если мы еще не знаем профиль автора, загружаем его
+                if (!this.participants.has(payload.new.user_id)) {
+                    const { data: profile } = await this.authManager.supabase.from('profiles').select('username, avatar_url, role').eq('id', payload.new.user_id).single();
+                    if (profile) {
+                        this.participants.set(payload.new.user_id, profile);
                     }
-                    this.addMessageToBox(payload.new);
-                    this.scrollToBottom();
                 }
+                this.addMessageToBox(payload.new);
+                this.scrollToBottom();
             })
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
                     console.log('Успешно подписан на обновления чата!');
+                } else {
+                    console.log('Статус подписки:', status);
                 }
             });
     }
