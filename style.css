@@ -1075,3 +1075,20 @@ button,
     background-color: rgba(255, 255, 255, 0.2);
 }
 /* === КОНЕЦ СТИЛЕЙ СКРОЛЛБАРА === */
+
+/* === СТИЛИ ДЛЯ БЕТА-ПРЕДУПРЕЖДЕНИЯ === */
+#betaWarningModal .close-beta-warning {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+#betaWarningModal .btn {
+    margin-top: 10px;
+}
