@@ -7,11 +7,11 @@ class MainPage {
     init() {
         this.setupEventListeners();
         this.updateOnlineCount();
-        this.showBetaWarningOnce(); // <-- ДОБАВИЛИ ВЫЗОВ НАШЕЙ НОВОЙ ФУНКЦИИ
+        this.showBetaWarningOnce();
         setInterval(() => this.updateOnlineCount(), 60000);
     }
 
-    // НОВАЯ ФУНКЦИЯ: Показывает предупреждение один раз за сессию
+    // ИСПРАВЛЕНИЕ: Вернули sessionStorage
     showBetaWarningOnce() {
         const modal = document.getElementById('betaWarningModal');
         // Проверяем, было ли окно уже показано в этой сессии
@@ -59,7 +59,6 @@ class MainPage {
             if (e.target.closest('.ip-btn')) this.copyIP(e.target.closest('.ip-btn'));
             if (e.target.closest('.logout-btn')) this.authManager.signOut();
 
-            // ДОБАВИЛИ ЛОГИКУ ЗАКРЫТИЯ ДЛЯ НОВОГО ОКНА
             const activeModal = document.querySelector('.auth-container.active, .ip-modal.active');
             if (e.target.closest('.close-beta-warning')) {
                 this.hideModal('#betaWarningModal');
