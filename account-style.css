@@ -52,7 +52,6 @@
     letter-spacing: 0.5px;
 }
 
-/* ИЗМЕНЕНО: Цвет роли администратора */
 .user-role.administrator {
     background: linear-gradient(45deg, #e74c3c, #c0392b);
     color: white;
@@ -150,13 +149,11 @@
     display: block;
 }
 
-/* СТИЛЬ ДЛЯ ИМЕНИ ПОЛЬЗОВАТЕЛЯ В СПИСКЕ ТИКЕТОВ (ДЛЯ АДМИНА) */
 .ticket-author {
     font-size: 0.85rem;
     color: var(--muted);
     margin-bottom: 10px;
 }
-
 
 .ticket-description {
   margin: 0 0 15px 0;
@@ -171,7 +168,7 @@
 .ticket-footer {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: center; /* Вот эта строчка - ключ к решению */
     margin-top: auto;
 }
 
