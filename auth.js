@@ -11,6 +11,13 @@ class AuthManager {
         this.supabase.auth.onAuthStateChange((event, session) => {
             this.updateUserUI(session?.user);
         });
+
+        // ИСПРАВЛЕНИЕ: Гарантируем, что кнопка выхода работает на любой странице
+        document.addEventListener('click', (event) => {
+            if (event.target.closest('.logout-btn')) {
+                this.signOut();
+            }
+        });
     }
 
     async signInWithDiscord() {
@@ -27,7 +34,8 @@ class AuthManager {
         document.body.classList.add('fade-out');
         setTimeout(async () => {
             await this.supabase.auth.signOut();
-            window.location.href = 'index.html';
+            // Всегда перенаправляем на главную страницу
+            window.location.href = '/'; 
         }, 250);
     }
 
