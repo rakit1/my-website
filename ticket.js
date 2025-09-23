@@ -6,9 +6,9 @@ class TicketPage {
         this.ticketId = new URLSearchParams(window.location.search).get('id');
         this.isCurrentUserAdmin = false;
         this.isTicketClosed = false;
-        this.pollingInterval = null;
+        this.channel = null; // Канал для Realtime
 
-        // Кэш для данных пользователей, чтобы не делать лишних запросов
+        // Кэш для данных пользователей
         this.participants = new Map();
 
         // Поиск элементов на странице
@@ -40,7 +40,7 @@ class TicketPage {
             this.user = user;
             await this.loadInitialData();
             this.setupEventListeners();
-            this.startPolling(); // ← Запускаем опрос каждые 2 секунды
+            this.subscribeToMessages(); // ← ЗАМЕНИЛИ POLLING НА REALTIME ПОДПИСКУ
         } else {
             window.location.href = 'index.html';
         }
@@ -51,7 +51,7 @@ class TicketPage {
      */
     async loadInitialData() {
         try {
-            // 1. Получаем профиль текущего пользователя (чтобы узнать, админ ли он)
+            // 1. Получаем профиль текущего пользователя
             const { data: profile } = await this.supabase
                 .from('profiles')
                 .select('role, username, avatar_url')
@@ -63,7 +63,7 @@ class TicketPage {
                 this.participants.set(this.user.id, profile);
             }
 
-            // 2. Получаем данные о тикете и проверяем, есть ли у пользователя доступ
+            // 2. Получаем данные о тикете
             const { data: ticketData, error: ticketError } = await this.supabase
                 .from('tickets')
                 .select('user_id, is_closed')
@@ -108,10 +108,7 @@ class TicketPage {
      * Отображает одно сообщение в чате.
      */
     addMessageToBox(message) {
-        // Защита от дублирования сообщений
-        if (document.querySelector(`[data-message-id="${message.id}"]`)) {
-            return;
-        }
+        if (document.querySelector(`[data-message-id="${message.id}"]`)) return;
 
         const authorProfile = this.participants.get(message.user_id) || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
         const isUserMessage = message.user_id === this.user.id;
@@ -154,20 +151,13 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
 
             try {
-                // Отправляем сообщение и сразу получаем его обратно
-                const { data: newMessage, error } = await this.supabase
+                const { error } = await this.supabase
                     .from('messages')
-                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content })
-                    .select()
-                    .single();
+                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content });
 
                 if (error) throw error;
                 
-                // Сразу отображаем своё сообщение
-                this.addMessageToBox(newMessage);
-                this.scrollToBottom();
                 this.messageForm.reset();
-
             } catch (error) {
                 alert('Ошибка отправки сообщения: ' + error.message);
             } finally {
@@ -176,7 +166,6 @@ class TicketPage {
             }
         });
 
-        // Обработчики для модального окна закрытия тикета
         this.closeTicketButton.addEventListener('click', () => {
             if (!this.isTicketClosed) this.confirmationModal.classList.add('active');
         });
@@ -187,51 +176,44 @@ class TicketPage {
     }
 
     /**
-     * Запускает опрос новых сообщений каждые 2 секунды
+     * Подписывается на новые сообщения в этом тикете через Realtime.
      */
-    startPolling() {
-        this.pollingInterval = setInterval(async () => {
-            try {
-                // Находим ID последнего сообщения на экране
-                const lastMessageElement = this.chatBox.lastElementChild;
-                const lastMessageId = lastMessageElement ? lastMessageElement.dataset.messageId : null;
-
-                // Запрашиваем сообщения, которые новее последнего
-                const query = this.supabase
-                    .from('messages')
-                    .select(`*, profiles(username, avatar_url, role)`)
-                    .eq('ticket_id', this.ticketId)
-                    .order('created_at', { ascending: true });
-
-                if (lastMessageId) {
-                    query.gt('id', lastMessageId); // Только сообщения новее последнего
-                }
-
-                const { data: newMessages, error } = await query;
-
-                if (error) throw error;
-
-                if (newMessages && newMessages.length > 0) {
-                    newMessages.forEach(msg => {
-                        if (msg.profiles && !this.participants.has(msg.user_id)) {
-                            this.participants.set(msg.user_id, msg.profiles);
+    subscribeToMessages() {
+        this.channel = this.supabase
+            .channel(`ticket-${this.ticketId}`)
+            .on('postgres_changes', 
+                { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'messages', 
+                    filter: `ticket_id=eq.${this.ticketId}` 
+                }, 
+                async (payload) => {
+                    const newMessage = payload.new;
+                    // Если мы еще не знаем автора, загрузим его данные
+                    if (!this.participants.has(newMessage.user_id)) {
+                        const { data: profile } = await this.supabase
+                            .from('profiles')
+                            .select('username, avatar_url, role')
+                            .eq('id', newMessage.user_id)
+                            .single();
+                        if (profile) {
+                            this.participants.set(newMessage.user_id, profile);
                         }
-                        this.addMessageToBox(msg);
-                    });
+                    }
+                    this.addMessageToBox(newMessage);
                     this.scrollToBottom();
                 }
-            } catch (error) {
-                console.error("Ошибка при загрузке новых сообщений:", error.message);
-            }
-        }, 2000); // Каждые 2 секунды
+            )
+            .subscribe();
     }
 
     /**
-     * Останавливает опрос при уходе со страницы
+     * Отписывается от канала Realtime при уходе со страницы.
      */
     destroy() {
-        if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
+        if (this.channel) {
+            this.supabase.removeChannel(this.channel);
         }
     }
 
@@ -255,7 +237,7 @@ class TicketPage {
     }
 
     /**
-     * Обновляет интерфейс в зависимости от статуса тикета (открыт/закрыт).
+     * Обновляет интерфейс в зависимости от статуса тикета.
      */
     updateTicketUI() {
         if (this.isTicketClosed) {
@@ -264,19 +246,14 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
             this.closeTicketButton.disabled = true;
             this.closeTicketButton.textContent = 'Тикет закрыт';
+            this.destroy(); // Отписываемся от обновлений, если тикет закрыт
         }
     }
 
-    /**
-     * Прокручивает чат в самый низ.
-     */
     scrollToBottom() {
         this.chatBox.scrollTop = this.chatBox.scrollHeight;
     }
 
-    /**
-     * Показывает ошибку на странице, если что-то пошло не так.
-     */
     showError(message) {
         this.chatBox.innerHTML = `<p class="error-message">${message}</p>`;
         this.messageForm.style.display = 'none';
@@ -289,6 +266,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const authManager = new AuthManager();
     const ticketPage = new TicketPage(authManager);
 
-    // Останавливаем polling, когда пользователь уходит со страницы
+    // Отписываемся от канала, когда пользователь уходит со страницы
     window.addEventListener('beforeunload', () => ticketPage.destroy());
 });
