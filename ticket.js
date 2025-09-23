@@ -4,7 +4,7 @@ class TicketPage {
         this.user = null;
         this.ticketId = new URLSearchParams(window.location.search).get('id');
         this.isCurrentUserAdmin = false;
-        this.participants = new Map(); // Хранилище для профилей участников чата
+        this.participants = new Map();
         
         this.chatBox = document.getElementById('chat-box');
         this.messageForm = document.getElementById('message-form');
@@ -41,25 +41,21 @@ class TicketPage {
     }
     
     async loadInitialData() {
-        // 1. Проверяем роль текущего пользователя
         const { data: profile } = await this.authManager.supabase
             .from('profiles')
-            .select('role, username, avatar_url')
+            .select('role')
             .eq('id', this.user.id)
             .single();
         
         if (profile) {
             this.isCurrentUserAdmin = profile.role === 'Администратор';
-            this.participants.set(this.user.id, profile);
         }
 
-        // 2. Загружаем данные тикета
         let ticketQuery = this.authManager.supabase
             .from('tickets')
             .select('user_id, is_closed')
             .eq('id', this.ticketId);
 
-        // Если пользователь не админ, он может видеть только свой тикет
         if (!this.isCurrentUserAdmin) {
             ticketQuery = ticketQuery.eq('user_id', this.user.id);
         }
@@ -77,14 +73,13 @@ class TicketPage {
         this.isTicketClosed = ticketData.is_closed;
         this.updateTicketUI();
 
-        // 3. Загружаем сообщения и профили их авторов
         const { data: messages, error: messagesError } = await this.authManager.supabase
             .from('messages')
             .select(`
                 content, 
                 created_at, 
                 user_id,
-                profiles ( username, avatar_url )
+                profiles:user_id ( username, avatar_url )
             `)
             .eq('ticket_id', this.ticketId)
             .order('created_at');
@@ -94,28 +89,37 @@ class TicketPage {
              return;
         }
 
-        // 4. Отображаем сообщения
         this.chatBox.innerHTML = '';
-        messages.forEach(msg => {
-            // Сохраняем профиль автора, если его еще нет
-            if (!this.participants.has(msg.user_id)) {
-                this.participants.set(msg.user_id, msg.profiles);
-            }
-            this.addMessageToBox(msg);
-        });
+        for (const msg of messages) {
+            await this.addMessageToBox(msg, msg.profiles);
+        }
         this.scrollToBottom();
     }
 
-    addMessageToBox(message) {
-        const authorProfile = this.participants.get(message.user_id) || { username: 'Пользователь', avatar_url: null };
-        const authorName = authorProfile.username;
-        const authorAvatarUrl = authorProfile.avatar_url;
+    async addMessageToBox(message, profile) {
+        let authorProfile = this.participants.get(message.user_id);
+
+        if (!authorProfile) {
+            if (profile) {
+                authorProfile = profile;
+            } else {
+                const { data: profileData } = await this.authManager.supabase
+                    .from('profiles')
+                    .select('username')
+                    .eq('id', message.user_id)
+                    .single();
+                authorProfile = profileData || { username: 'Пользователь' };
+            }
+            this.participants.set(message.user_id, authorProfile);
+        }
+        
+        const { data: { user } } = await this.authManager.supabase.auth.getUserById(message.user_id);
+        const authorAvatarUrl = user?.user_metadata?.avatar_url;
+        const authorName = authorProfile.username || user?.user_metadata?.full_name || 'Пользователь';
+
 
         const isUserMessage = message.user_id === this.user.id;
-        // Сообщения от админов всегда имеют класс 'admin', если это не сам пользователь
-        const messageRoleClass = (this.isCurrentUserAdmin && isUserMessage) || !this.isCurrentUserAdmin ? 'user' : 'admin';
-
-
+        
         const wrapper = document.createElement('div');
         wrapper.className = `message-wrapper ${isUserMessage ? 'user' : 'admin'}`;
         
@@ -157,13 +161,9 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
 
             try {
-                const { data, error } = await this.authManager.supabase
+                await this.authManager.supabase
                     .from('messages')
-                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content })
-                    .select()
-                    .single();
-
-                if (error) throw error;
+                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content });
                 
                 this.messageForm.reset();
             } catch (error) {
@@ -235,18 +235,7 @@ class TicketPage {
                 table: 'messages',
                 filter: `ticket_id=eq.${this.ticketId}`
             }, async (payload) => {
-                const authorId = payload.new.user_id;
-                // Если мы еще не знаем автора, загружаем его профиль
-                if (!this.participants.has(authorId)) {
-                     const { data: profile } = await this.authManager.supabase
-                        .from('profiles')
-                        .select('username, avatar_url')
-                        .eq('id', authorId)
-                        .single();
-                    if(profile) this.participants.set(authorId, profile);
-                }
-
-                this.addMessageToBox(payload.new);
+                await this.addMessageToBox(payload.new);
                 this.scrollToBottom();
             })
             .subscribe();
