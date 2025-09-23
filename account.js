@@ -15,11 +15,6 @@ class AccountPage {
             this.user = user;
             this.displayUserProfile();
             this.fetchAndDisplayTickets();
-            document.body.addEventListener('click', (e) => {
-                if (e.target.closest('.logout-btn')) {
-                    this.authManager.signOut();
-                }
-            });
         } else {
             window.location.href = 'index.html';
         }
@@ -43,7 +38,6 @@ class AccountPage {
             if (error && error.code !== 'PGRST116') throw error;
             if (data) userRole = data.role;
 
-            // Если пользователь - админ, показываем кнопку
             if (userRole === 'Администратор') {
                 this.displayAdminButton();
             }
@@ -65,7 +59,6 @@ class AccountPage {
     }
 
     async displayAdminButton() {
-        // Получаем количество открытых тикетов
         const { count, error } = await this.authManager.supabase
             .from('tickets')
             .select('*', { count: 'exact', head: true })
@@ -90,11 +83,8 @@ class AccountPage {
         if (!this.user || !this.ticketsList) return;
 
         try {
-            const { data, error } = await this.authManager.supabase
-                .from('tickets')
-                .select('id, description, created_at, is_closed')
-                .eq('user_id', this.user.id)
-                .order('created_at', { ascending: false });
+            // ИЗМЕНЕНИЕ: Используем безопасную RPC функцию
+            const { data, error } = await this.authManager.supabase.rpc('get_tickets_for_user');
 
             if (error) throw error;
 
