@@ -64,15 +64,15 @@ class TicketPage {
             this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
             this.updateTicketUI();
             
-            // ИЗМЕНЕНИЕ: Запрашиваем сообщения через нашу безопасную функцию
             const { data: messages, error: messagesError } = await this.supabase
                 .rpc('get_messages_for_ticket', { ticket_id_arg: this.ticketId });
 
             if (messagesError) throw messagesError;
             
             messages.forEach(msg => {
+                // ИСПРАВЛЕНИЕ: Убрали JSON.parse(), так как msg.profiles - это уже готовый объект
                 if (msg.profiles && !this.participants.has(msg.user_id)) {
-                    this.participants.set(msg.user_id, JSON.parse(msg.profiles));
+                    this.participants.set(msg.user_id, msg.profiles);
                 }
             });
 
@@ -88,7 +88,8 @@ class TicketPage {
     addMessageToBox(message) {
         if (document.querySelector(`[data-message-id="${message.id}"]`)) return;
 
-        const authorProfile = this.participants.get(message.user_id) || JSON.parse(message.profiles) || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
+        // ИСПРАВЛЕНИЕ: Убрали JSON.parse()
+        const authorProfile = this.participants.get(message.user_id) || message.profiles || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
         const isUserMessage = message.user_id === this.user.id;
         const isAdmin = authorProfile.role === 'Администратор';
         const wrapper = document.createElement('div');
