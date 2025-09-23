@@ -109,6 +109,8 @@
 .message p {
     margin: 0;
     white-space: pre-wrap;
+    /* ИСПРАВЛЕНИЕ: Добавляем правило переноса для очень длинных слов */
+    word-break: break-word;
 }
 
 .message span {
