@@ -37,7 +37,7 @@
 
 <main>
   <div class="wrap">
-    <div id="support-content" class="support-container">
+    <div id="support-content" class="support-container" style="display: none;">
         <h1 class="support-title">Поддержка</h1>
         <p class="support-description">Ваш никнейм Discord будет прикреплен к заявке автоматически. Опишите проблему, и мы свяжемся с вами.</p>
         <form id="ticket-form" class="ticket-form">
@@ -48,6 +48,12 @@
             <button type="submit" class="btn btn-primary">Отправить обращение</button>
         </form>
         <div id="form-feedback" class="form-feedback" aria-hidden="true"></div>
+    </div>
+    
+    <div id="ticket-exists-warning" class="support-container" style="display: none;">
+        <h1 class="support-title">У вас уже есть активное обращение</h1>
+        <p class="support-description">Вы не можете создать новый тикет, пока ваш предыдущий не будет закрыт. Пожалуйста, ожидайте ответа или просмотрите статус вашего обращения в личном кабинете.</p>
+        <a href="account.html" class="btn btn-primary">Перейти в личный кабинет</a>
     </div>
   </div>
 </main>
