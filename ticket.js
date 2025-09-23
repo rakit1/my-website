@@ -6,7 +6,7 @@ class TicketPage {
         this.ticketId = new URLSearchParams(window.location.search).get('id');
         this.isCurrentUserAdmin = false;
         this.isTicketClosed = false;
-        this.channel = null;
+        this.pollingInterval = null;
 
         // Кэш для данных пользователей, чтобы не делать лишних запросов
         this.participants = new Map();
@@ -40,7 +40,7 @@ class TicketPage {
             this.user = user;
             await this.loadInitialData();
             this.setupEventListeners();
-            this.subscribeToRealtimeMessages();
+            this.startPolling(); // ← Запускаем опрос каждые 2 секунды
         } else {
             window.location.href = 'index.html';
         }
@@ -163,7 +163,7 @@ class TicketPage {
 
                 if (error) throw error;
                 
-                // Не ждем Realtime, а сразу отображаем свое сообщение
+                // Сразу отображаем своё сообщение
                 this.addMessageToBox(newMessage);
                 this.scrollToBottom();
                 this.messageForm.reset();
@@ -187,35 +187,52 @@ class TicketPage {
     }
 
     /**
-     * Подписывается на Realtime для получения новых сообщений.
+     * Запускает опрос новых сообщений каждые 2 секунды
      */
-    subscribeToRealtimeMessages() {
-        if (this.channel) {
-            this.supabase.removeChannel(this.channel);
-        }
+    startPolling() {
+        this.pollingInterval = setInterval(async () => {
+            try {
+                // Находим ID последнего сообщения на экране
+                const lastMessageElement = this.chatBox.lastElementChild;
+                const lastMessageId = lastMessageElement ? lastMessageElement.dataset.messageId : null;
 
-        this.channel = this.supabase.channel(`messages:ticket_id=eq.${this.ticketId}`);
-        
-        this.channel.on(
-            'postgres_changes', 
-            { event: 'INSERT', schema: 'public', table: 'messages' },
-            async (payload) => {
-                // Если пришло сообщение от нового пользователя, загружаем его профиль
-                if (!this.participants.has(payload.new.user_id)) {
-                    const { data: profile } = await this.supabase.from('profiles').select('username, avatar_url, role').eq('id', payload.new.user_id).single();
-                    if (profile) this.participants.set(payload.new.user_id, profile);
+                // Запрашиваем сообщения, которые новее последнего
+                const query = this.supabase
+                    .from('messages')
+                    .select(`*, profiles(username, avatar_url, role)`)
+                    .eq('ticket_id', this.ticketId)
+                    .order('created_at', { ascending: true });
+
+                if (lastMessageId) {
+                    query.gt('id', lastMessageId); // Только сообщения новее последнего
                 }
-                
-                this.addMessageToBox(payload.new);
-                this.scrollToBottom();
+
+                const { data: newMessages, error } = await query;
+
+                if (error) throw error;
+
+                if (newMessages && newMessages.length > 0) {
+                    newMessages.forEach(msg => {
+                        if (msg.profiles && !this.participants.has(msg.user_id)) {
+                            this.participants.set(msg.user_id, msg.profiles);
+                        }
+                        this.addMessageToBox(msg);
+                    });
+                    this.scrollToBottom();
+                }
+            } catch (error) {
+                console.error("Ошибка при загрузке новых сообщений:", error.message);
             }
-        ).subscribe((status) => {
-            if (status === 'SUBSCRIBED') {
-                console.log('Успешная подписка на обновления чата!');
-            } else {
-                console.error('Ошибка подписки:', status);
-            }
-        });
+        }, 2000); // Каждые 2 секунды
+    }
+
+    /**
+     * Останавливает опрос при уходе со страницы
+     */
+    destroy() {
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+        }
     }
 
     /**
@@ -270,5 +287,8 @@ class TicketPage {
 // Запускаем все, когда страница загрузится
 document.addEventListener('DOMContentLoaded', () => {
     const authManager = new AuthManager();
-    new TicketPage(authManager);
+    const ticketPage = new TicketPage(authManager);
+
+    // Останавливаем polling, когда пользователь уходит со страницы
+    window.addEventListener('beforeunload', () => ticketPage.destroy());
 });
