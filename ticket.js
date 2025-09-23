@@ -139,12 +139,18 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
 
             try {
-                // Мы отправляем сообщение и НЕ ждем ответа для отображения.
-                // За это теперь полностью отвечает подписка (subscribeToMessages).
-                const { error } = await this.authManager.supabase
+                // Отправляем сообщение в базу данных
+                const { data: newMessage, error } = await this.authManager.supabase
                     .from('messages')
-                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content });
+                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content })
+                    .select()
+                    .single();
+
                 if (error) throw error;
+                
+                // Сразу же отображаем наше сообщение, не дожидаясь подписки
+                this.addMessageToBox(newMessage);
+                this.scrollToBottom();
                 this.messageForm.reset();
             } catch (error) {
                 alert('Ошибка отправки сообщения: ' + error.message);
@@ -205,17 +211,17 @@ class TicketPage {
             .channel(`messages_ticket_${this.ticketId}`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${this.ticketId}`},
             async (payload) => {
-                // --- ГЛАВНОЕ ИСПРАВЛЕНИЕ ---
-                // Просто добавляем ЛЮБОЕ новое сообщение, которое приходит по подписке.
-                // Это будет работать и для отправителя, и для получателя.
-                if (!this.participants.has(payload.new.user_id)) {
-                    const { data: profile } = await this.authManager.supabase.from('profiles').select('username, avatar_url, role').eq('id', payload.new.user_id).single();
-                    if (profile) {
-                        this.participants.set(payload.new.user_id, profile);
+                // Получаем сообщения ТОЛЬКО от других пользователей
+                if (payload.new.user_id !== this.user.id) {
+                    if (!this.participants.has(payload.new.user_id)) {
+                        const { data: profile } = await this.authManager.supabase.from('profiles').select('username, avatar_url, role').eq('id', payload.new.user_id).single();
+                        if (profile) {
+                            this.participants.set(payload.new.user_id, profile);
+                        }
                     }
+                    this.addMessageToBox(payload.new);
+                    this.scrollToBottom();
                 }
-                this.addMessageToBox(payload.new);
-                this.scrollToBottom();
             })
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
