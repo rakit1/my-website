@@ -73,19 +73,20 @@ class TicketPage {
         this.isTicketClosed = ticketData.is_closed;
         this.updateTicketUI();
 
+        // ИСПРАВЛЕННЫЙ ЗАПРОС К СООБЩЕНИЯМ
         const { data: messages, error: messagesError } = await this.authManager.supabase
             .from('messages')
             .select(`
                 content, 
                 created_at, 
                 user_id,
-                profiles:user_id ( username, avatar_url )
+                profiles ( username ) 
             `)
             .eq('ticket_id', this.ticketId)
             .order('created_at');
 
         if (messagesError) {
-             this.chatBox.innerHTML = '<p class="error-message">Не удалось загрузить сообщения.</p>';
+             this.chatBox.innerHTML = `<p class="error-message">Не удалось загрузить сообщения. Ошибка: ${messagesError.message}</p>`;
              return;
         }
 
@@ -100,23 +101,13 @@ class TicketPage {
         let authorProfile = this.participants.get(message.user_id);
 
         if (!authorProfile) {
-            if (profile) {
-                authorProfile = profile;
-            } else {
-                const { data: profileData } = await this.authManager.supabase
-                    .from('profiles')
-                    .select('username')
-                    .eq('id', message.user_id)
-                    .single();
-                authorProfile = profileData || { username: 'Пользователь' };
-            }
+            authorProfile = profile || { username: 'Пользователь' };
             this.participants.set(message.user_id, authorProfile);
         }
         
         const { data: { user } } = await this.authManager.supabase.auth.getUserById(message.user_id);
         const authorAvatarUrl = user?.user_metadata?.avatar_url;
         const authorName = authorProfile.username || user?.user_metadata?.full_name || 'Пользователь';
-
 
         const isUserMessage = message.user_id === this.user.id;
         
