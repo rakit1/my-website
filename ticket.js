@@ -63,7 +63,6 @@ class TicketPage {
             }
 
             const { data: ticketData, error: ticketError } = await ticketQuery.single();
-
             if (ticketError) throw new Error("Не удалось найти тикет или у вас нет к нему доступа.");
 
             this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
@@ -72,7 +71,7 @@ class TicketPage {
 
             const { data: messages, error: messagesError } = await this.authManager.supabase
                 .from('messages')
-                .select(`user_id, content, created_at, profiles(username, avatar_url)`)
+                .select(`user_id, content, created_at, profiles(username, avatar_url, role)`)
                 .eq('ticket_id', this.ticketId)
                 .order('created_at');
 
@@ -95,9 +94,10 @@ class TicketPage {
     }
 
     addMessageToBox(message) {
-        const authorProfile = this.participants.get(message.user_id) || { username: 'Пользователь', avatar_url: null };
+        const authorProfile = this.participants.get(message.user_id) || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
         const isUserMessage = message.user_id === this.user.id;
-        
+        const isAdmin = authorProfile.role === 'Администратор';
+
         const wrapper = document.createElement('div');
         wrapper.className = `message-wrapper ${isUserMessage ? 'user' : 'admin'}`;
         
@@ -107,10 +107,12 @@ class TicketPage {
             ? `<img src="${authorProfile.avatar_url}" alt="Аватар">`
             : `<div class="message-avatar-placeholder">${authorProfile.username.charAt(0).toUpperCase()}</div>`;
 
+        const authorClass = isAdmin ? 'message-author admin-role' : 'message-author';
+
         wrapper.innerHTML = `
             <div class="message-header">
                 <div class="message-avatar">${avatarHTML}</div>
-                <div class="message-author">${authorProfile.username}</div>
+                <div class="${authorClass}">${authorProfile.username}</div>
             </div>
             <div class="message">
                 <p>${message.content}</p>
@@ -137,21 +139,11 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
 
             try {
-                const { data: newMessage, error } = await this.authManager.supabase
+                const { error } = await this.authManager.supabase
                     .from('messages')
-                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content })
-                    .select()
-                    .single();
-
+                    .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content });
                 if (error) throw error;
-                
-                // --- ИСПРАВЛЕНИЕ ДЛЯ РЕАЛЬНОГО ВРЕМЕНИ ---
-                // Мы не ждем ответа от сервера, а сразу добавляем сообщение в чат
-                this.addMessageToBox(newMessage);
-                this.scrollToBottom();
                 this.messageForm.reset();
-                // -----------------------------------------
-
             } catch (error) {
                 alert('Ошибка отправки сообщения: ' + error.message);
             } finally {
@@ -211,15 +203,16 @@ class TicketPage {
             .channel(`messages_ticket_${this.ticketId}`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${this.ticketId}`},
             async (payload) => {
-                // Добавляем сообщение, только если оно пришло от ДРУГОГО пользователя
-                if (payload.new.user_id !== this.user.id) {
-                    if (!this.participants.has(payload.new.user_id)) {
-                        const { data: profile } = await this.authManager.supabase.from('profiles').select('username, avatar_url').eq('id', payload.new.user_id).single();
-                        this.participants.set(payload.new.user_id, profile);
-                    }
-                    this.addMessageToBox(payload.new);
-                    this.scrollToBottom();
+                // --- ИСПРАВЛЕНИЕ ДЛЯ РЕАЛЬНОГО ВРЕМЕНИ ---
+                // Теперь мы просто добавляем любое новое сообщение, которое приходит по подписке.
+                // Это будет работать и для отправителя, и для получателя.
+                if (!this.participants.has(payload.new.user_id)) {
+                    const { data: profile } = await this.authManager.supabase.from('profiles').select('username, avatar_url, role').eq('id', payload.new.user_id).single();
+                    this.participants.set(payload.new.user_id, profile);
                 }
+                this.addMessageToBox(payload.new);
+                this.scrollToBottom();
+                // -----------------------------------------
             })
             .subscribe();
     }
