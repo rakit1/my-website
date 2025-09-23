@@ -3,6 +3,8 @@ class TicketPage {
         this.authManager = authManager;
         this.user = null;
         this.ticketId = new URLSearchParams(window.location.search).get('id');
+        this.isCurrentUserAdmin = false;
+        this.participants = new Map(); // Хранилище для профилей участников чата
         
         this.chatBox = document.getElementById('chat-box');
         this.messageForm = document.getElementById('message-form');
@@ -39,12 +41,30 @@ class TicketPage {
     }
     
     async loadInitialData() {
-        const { data: ticketData, error: ticketError } = await this.authManager.supabase
-            .from('tickets')
-            .select('description, created_at, is_closed')
-            .eq('id', this.ticketId)
-            .eq('user_id', this.user.id)
+        // 1. Проверяем роль текущего пользователя
+        const { data: profile } = await this.authManager.supabase
+            .from('profiles')
+            .select('role, username, avatar_url')
+            .eq('id', this.user.id)
             .single();
+        
+        if (profile) {
+            this.isCurrentUserAdmin = profile.role === 'Администратор';
+            this.participants.set(this.user.id, profile);
+        }
+
+        // 2. Загружаем данные тикета
+        let ticketQuery = this.authManager.supabase
+            .from('tickets')
+            .select('user_id, is_closed')
+            .eq('id', this.ticketId);
+
+        // Если пользователь не админ, он может видеть только свой тикет
+        if (!this.isCurrentUserAdmin) {
+            ticketQuery = ticketQuery.eq('user_id', this.user.id);
+        }
+
+        const { data: ticketData, error: ticketError } = await ticketQuery.single();
 
         if (ticketError || !ticketData) {
             this.chatBox.innerHTML = '<p class="error-message">Не удалось найти тикет или у вас нет к нему доступа.</p>';
@@ -56,10 +76,16 @@ class TicketPage {
         this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
         this.isTicketClosed = ticketData.is_closed;
         this.updateTicketUI();
-        
+
+        // 3. Загружаем сообщения и профили их авторов
         const { data: messages, error: messagesError } = await this.authManager.supabase
             .from('messages')
-            .select('content, created_at, user_id')
+            .select(`
+                content, 
+                created_at, 
+                user_id,
+                profiles ( username, avatar_url )
+            `)
             .eq('ticket_id', this.ticketId)
             .order('created_at');
 
@@ -67,21 +93,49 @@ class TicketPage {
              this.chatBox.innerHTML = '<p class="error-message">Не удалось загрузить сообщения.</p>';
              return;
         }
-        
+
+        // 4. Отображаем сообщения
         this.chatBox.innerHTML = '';
-        messages.forEach(msg => this.addMessageToBox(msg));
+        messages.forEach(msg => {
+            // Сохраняем профиль автора, если его еще нет
+            if (!this.participants.has(msg.user_id)) {
+                this.participants.set(msg.user_id, msg.profiles);
+            }
+            this.addMessageToBox(msg);
+        });
         this.scrollToBottom();
     }
 
     addMessageToBox(message) {
-        const messageDiv = document.createElement('div');
-        const isUser = message.user_id === this.user.id;
-        messageDiv.className = `message ${isUser ? 'user' : 'admin'}`;
+        const authorProfile = this.participants.get(message.user_id) || { username: 'Пользователь', avatar_url: null };
+        const authorName = authorProfile.username;
+        const authorAvatarUrl = authorProfile.avatar_url;
+
+        const isUserMessage = message.user_id === this.user.id;
+        // Сообщения от админов всегда имеют класс 'admin', если это не сам пользователь
+        const messageRoleClass = (this.isCurrentUserAdmin && isUserMessage) || !this.isCurrentUserAdmin ? 'user' : 'admin';
+
+
+        const wrapper = document.createElement('div');
+        wrapper.className = `message-wrapper ${isUserMessage ? 'user' : 'admin'}`;
         
         const date = new Date(message.created_at).toLocaleString('ru-RU');
+        
+        const avatarHTML = authorAvatarUrl
+            ? `<img src="${authorAvatarUrl}" alt="Аватар">`
+            : `<div class="message-avatar-placeholder">${authorName.charAt(0).toUpperCase()}</div>`;
 
-        messageDiv.innerHTML = `<p>${message.content}</p><span>${date}</span>`;
-        this.chatBox.appendChild(messageDiv);
+        wrapper.innerHTML = `
+            <div class="message-header">
+                <div class="message-avatar">${avatarHTML}</div>
+                <div class="message-author">${authorName}</div>
+            </div>
+            <div class="message">
+                <p>${message.content}</p>
+                <span>${date}</span>
+            </div>
+        `;
+        this.chatBox.appendChild(wrapper);
     }
     
     scrollToBottom() {
@@ -89,7 +143,6 @@ class TicketPage {
     }
 
     setupEventListeners() {
-        // ИСПРАВЛЕНИЕ: Добавлен обработчик для кнопки выхода
         document.body.addEventListener('click', (e) => {
             if (e.target.closest('.logout-btn')) {
                 this.authManager.signOut();
@@ -112,8 +165,6 @@ class TicketPage {
 
                 if (error) throw error;
                 
-                this.addMessageToBox(data);
-                this.scrollToBottom();
                 this.messageForm.reset();
             } catch (error) {
                 alert('Ошибка отправки сообщения: ' + error.message);
@@ -141,8 +192,7 @@ class TicketPage {
             const { error } = await this.authManager.supabase
                 .from('tickets')
                 .update({ is_closed: true })
-                .eq('id', this.ticketId)
-                .eq('user_id', this.user.id);
+                .eq('id', this.ticketId);
 
             if (error) throw error;
 
@@ -158,6 +208,9 @@ class TicketPage {
     }
 
     updateTicketUI() {
+        const canClose = this.isCurrentUserAdmin || !this.isTicketClosed;
+        this.closeTicketButton.style.display = canClose ? 'inline-flex' : 'none';
+
         if (this.isTicketClosed) {
             this.messageTextarea.disabled = true;
             this.messageTextarea.placeholder = 'Тикет закрыт. Отправка сообщений недоступна.';
@@ -181,11 +234,20 @@ class TicketPage {
                 schema: 'public',
                 table: 'messages',
                 filter: `ticket_id=eq.${this.ticketId}`
-            }, (payload) => {
-                if (payload.new.user_id !== this.user.id) {
-                    this.addMessageToBox(payload.new);
-                    this.scrollToBottom();
+            }, async (payload) => {
+                const authorId = payload.new.user_id;
+                // Если мы еще не знаем автора, загружаем его профиль
+                if (!this.participants.has(authorId)) {
+                     const { data: profile } = await this.authManager.supabase
+                        .from('profiles')
+                        .select('username, avatar_url')
+                        .eq('id', authorId)
+                        .single();
+                    if(profile) this.participants.set(authorId, profile);
                 }
+
+                this.addMessageToBox(payload.new);
+                this.scrollToBottom();
             })
             .subscribe();
     }
