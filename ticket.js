@@ -90,13 +90,38 @@ class TicketPage {
         const authorProfile = this.participants.get(message.user_id) || message.profiles || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
         const isUserMessage = message.user_id === this.user.id;
         const isAdmin = authorProfile.role === 'Администратор';
+
         const wrapper = document.createElement('div');
         wrapper.className = `message-wrapper ${isUserMessage ? 'user' : 'admin'}`;
         wrapper.dataset.messageId = message.id;
+
         const date = new Date(message.created_at).toLocaleString('ru-RU');
-        const avatarHTML = authorProfile.avatar_url ? `<img src="${authorProfile.avatar_url}" alt="Аватар">` : `<div class="message-avatar-placeholder">${authorProfile.username.charAt(0).toUpperCase()}</div>`;
+        
+        const avatarHTML = authorProfile.avatar_url 
+            ? `<img src="${authorProfile.avatar_url}" alt="Аватар">` 
+            : `<div class="message-avatar-placeholder">${authorProfile.username.charAt(0).toUpperCase()}</div>`;
+        
         const authorClass = isAdmin ? 'message-author admin-role' : 'message-author';
-        wrapper.innerHTML = `<div class="message-header"><div class="message-avatar">${avatarHTML}</div><div class="${authorClass}">${authorProfile.username}</div></div><div class="message"><p>${message.content}</p><span>${date}</span></div>`;
+        
+        const messageHeader = document.createElement('div');
+        messageHeader.className = 'message-header';
+        messageHeader.innerHTML = `<div class="message-avatar">${avatarHTML}</div><div class="${authorClass}">${authorProfile.username}</div>`;
+
+        const messageBody = document.createElement('div');
+        messageBody.className = 'message';
+        
+        const messageContent = document.createElement('p');
+        messageContent.textContent = message.content; // Используем textContent для защиты от XSS
+        
+        const messageTimestamp = document.createElement('span');
+        messageTimestamp.textContent = date;
+
+        messageBody.appendChild(messageContent);
+        messageBody.appendChild(messageTimestamp);
+        
+        wrapper.appendChild(messageHeader);
+        wrapper.appendChild(messageBody);
+
         this.chatBox.appendChild(wrapper);
     }
     
