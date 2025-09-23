@@ -140,15 +140,13 @@ class TicketPage {
             this.sendMessageButton.disabled = true;
 
             try {
-                // Отправляем сообщение. Подписка сама его получит и отобразит.
+                // Отправляем сообщение. Подписка сама его получит и отобразит для всех.
                 const { error } = await this.authManager.supabase
                     .from('messages')
                     .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content });
-                
                 if (error) throw error;
                 
                 this.messageForm.reset();
-
             } catch (error) {
                 alert('Ошибка отправки сообщения: ' + error.message);
             } finally {
