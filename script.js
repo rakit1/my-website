@@ -11,14 +11,11 @@ class MainPage {
         setInterval(() => this.updateOnlineCount(), 60000);
     }
 
-    // ИСПРАВЛЕНИЕ: Вернули sessionStorage
     showBetaWarningOnce() {
         const modal = document.getElementById('betaWarningModal');
-        // Проверяем, было ли окно уже показано в этой сессии
+        // Показываем окно, только если оно не было показано в этой сессии
         if (modal && !sessionStorage.getItem('betaWarningShown')) {
             this.showModal(modal);
-            // Запоминаем, что окно было показано
-            sessionStorage.setItem('betaWarningShown', 'true');
         }
     }
 
@@ -52,6 +49,7 @@ class MainPage {
 
     setupEventListeners() {
         document.body.addEventListener('click', (e) => {
+            // Обработчики для всех кнопок
             if (e.target.closest('.mobile-menu-btn')) this.toggleMobileMenu();
             if (e.target.closest('.login-btn')) this.showModal('#authPage');
             if (e.target.closest('#discordSignIn')) this.authManager.signInWithDiscord();
@@ -59,20 +57,25 @@ class MainPage {
             if (e.target.closest('.ip-btn')) this.copyIP(e.target.closest('.ip-btn'));
             if (e.target.closest('.logout-btn')) this.authManager.signOut();
 
-            const activeModal = document.querySelector('.auth-container.active, .ip-modal.active');
-            if (e.target.closest('.close-beta-warning')) {
-                this.hideModal('#betaWarningModal');
-            }
-            if (activeModal) {
-                 if (e.target.closest('.close-auth, .close-ip-modal') || e.target === activeModal) {
-                    this.hideModal(activeModal);
+            // ИСПРАВЛЕНИЕ: Логика закрытия модальных окон
+            const authModal = e.target.closest('.auth-container');
+            if (authModal) {
+                // Если кликнули на кнопку закрытия бета-окна (крестик или кнопку "Я понимаю")
+                if (e.target.closest('.close-beta-warning-btn') || (authModal.id === 'betaWarningModal' && e.target.closest('.close-auth'))) {
+                    this.hideModal(authModal);
+                    // Сразу же запоминаем, что окно было показано
+                    sessionStorage.setItem('betaWarningShown', 'true');
+                } 
+                // Логика для других модальных окон
+                else if (e.target.closest('.close-auth, .close-ip-modal') || e.target === authModal) {
+                    this.hideModal(authModal);
                 }
             }
         });
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                document.querySelectorAll('.auth-container.active, .ip-modal.active').forEach(modal => this.hideModal(modal));
+                document.querySelectorAll('.auth-container.active').forEach(modal => this.hideModal(modal));
             }
         });
     }
