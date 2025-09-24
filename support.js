@@ -13,14 +13,26 @@ class SupportPage {
     }
 
     init() {
-        this.authManager.auth.onAuthStateChanged(user => {
+        // ИСПРАВЛЕНИЕ БАГА №3: Тоже слушаем событие о готовности пользователя
+        document.addEventListener('userStateReady', (event) => {
+            const user = event.detail;
             if (user) {
-                this.user = user;
+                this.user = this.authManager.user; // Берем полные данные из authManager
                 this.setupAuthenticatedView();
             } else {
                 this.setupGuestView();
             }
         });
+
+        // Проверка на случай, если пользователь уже авторизован
+        if (this.authManager.user) {
+            this.user = this.authManager.user;
+            this.setupAuthenticatedView();
+        } else if (this.authManager.auth.currentUser === null) {
+            // Если мы точно знаем, что пользователя нет, показываем окно входа
+            this.setupGuestView();
+        }
+        
         if (this.form) this.form.addEventListener('submit', (e) => this.handleSubmit(e));
     }
 
@@ -49,11 +61,17 @@ class SupportPage {
 
     async handleSubmit(event) {
         event.preventDefault();
+        if (!this.user) {
+            this.showFeedback('Вы не авторизованы.', 'error');
+            return;
+        }
         const description = this.form.elements.description.value.trim();
         if (!description) return this.showFeedback('Описание не может быть пустым.', 'error');
+        
         const submitButton = this.form.querySelector('button[type="submit"]');
         submitButton.disabled = true;
         submitButton.textContent = 'Отправка...';
+        
         try {
             const newTicketRef = await this.db.collection('tickets').add({
                 user_id: this.user.uid,
