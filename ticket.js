@@ -106,7 +106,8 @@ class TicketPage {
         const wrapper = document.createElement('div');
         wrapper.className = `message-wrapper ${message.user_id === this.user.uid ? 'user' : 'admin'}`;
         wrapper.dataset.messageId = messageId;
-        const date = new Date(message.created_at.toDate()).toLocaleString('ru-RU');
+        // ИСПРАВЛЕНИЕ: Добавлена проверка на существование даты
+        const date = message.created_at ? new Date(message.created_at.toDate()).toLocaleString('ru-RU') : 'отправка...';
         const avatarHTML = author.avatar_url ? `<img src="${author.avatar_url}" alt="Аватар">` : `<div class="message-avatar-placeholder">${(author.username || 'U').charAt(0).toUpperCase()}</div>`;
         wrapper.innerHTML = `<div class="message-header"><div class="message-avatar">${avatarHTML}</div><div class="message-author ${author.role === 'Администратор' ? 'admin-role' : ''}">${author.username || 'Пользователь'}</div></div><div class="message"><p>${message.content}</p><span>${date}</span></div>`;
         this.chatBox.appendChild(wrapper);
