@@ -64,12 +64,12 @@ class TicketPage {
             this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
             this.updateTicketUI();
             
-            // --- ИЗМЕНЕНИЕ ЗДЕСЬ: Заменяем вызов старой функции на новый, безопасный запрос ---
+            // --- ИЗМЕНЕНИЕ ЗДЕСЬ: Указываем Supabase, как связать `messages` и `profiles` ---
             const { data: messages, error: messagesError } = await this.supabase
                 .from('messages')
                 .select(`
                     *,
-                    profiles (
+                    profiles:user_id (
                         username,
                         avatar_url,
                         role
@@ -99,10 +99,7 @@ class TicketPage {
     addMessageToBox(message) {
         if (document.querySelector(`[data-message-id="${message.id}"]`)) return;
         
-        // --- ИЗМЕНЕНИЕ: Теперь профиль всегда будет вложенным объектом ---
         const authorProfile = this.participants.get(message.user_id) || message.profiles || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
-        // --- КОНЕЦ ИЗМЕНЕНИЯ ---
-
         const isUserMessage = message.user_id === this.user.id;
         const isAdmin = authorProfile.role === 'Администратор';
 
@@ -114,19 +111,19 @@ class TicketPage {
         
         const avatarHTML = authorProfile.avatar_url 
             ? `<img src="${authorProfile.avatar_url}" alt="Аватар">` 
-            : `<div class="message-avatar-placeholder">${authorProfile.username.charAt(0).toUpperCase()}</div>`;
+            : `<div class="message-avatar-placeholder">${(authorProfile.username || 'U').charAt(0).toUpperCase()}</div>`;
         
         const authorClass = isAdmin ? 'message-author admin-role' : 'message-author';
         
         const messageHeader = document.createElement('div');
         messageHeader.className = 'message-header';
-        messageHeader.innerHTML = `<div class="message-avatar">${avatarHTML}</div><div class="${authorClass}">${authorProfile.username}</div>`;
+        messageHeader.innerHTML = `<div class="message-avatar">${avatarHTML}</div><div class="${authorClass}">${authorProfile.username || 'Пользователь'}</div>`;
 
         const messageBody = document.createElement('div');
         messageBody.className = 'message';
         
         const messageContent = document.createElement('p');
-        messageContent.textContent = message.content; // Используем textContent для защиты от XSS
+        messageContent.textContent = message.content;
         
         const messageTimestamp = document.createElement('span');
         messageTimestamp.textContent = date;
@@ -186,10 +183,8 @@ class TicketPage {
                     if (profile) this.participants.set(newMessage.user_id, profile);
                 }
                 
-                // --- ИЗМЕНЕНИЕ: В payload нет вложенных данных, нужно их добавить для консистентности ---
                 const finalMessage = { ...newMessage, profiles: this.participants.get(newMessage.user_id) };
                 this.addMessageToBox(finalMessage);
-                // --- КОНЕЦ ИЗМЕНЕНИЯ ---
 
                 this.scrollToBottom();
             })
