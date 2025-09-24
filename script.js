@@ -1,7 +1,10 @@
 class MainPage {
-    constructor(authManager) {
-        this.authManager = authManager;
-        this.init();
+    constructor() {
+        // Просто ждем, пока authManager будет готов
+        document.addEventListener('userStateReady', (event) => {
+            this.user = event.detail;
+            this.init();
+        });
     }
     
     init() {
@@ -13,9 +16,8 @@ class MainPage {
 
     showBetaWarningOnce() {
         const modal = document.getElementById('betaWarningModal');
-        // Проверяем, было ли модальное окно уже показано в этой сессии
         if (modal && !sessionStorage.getItem('betaWarningShown')) {
-            this.showModal(modal); // Передаем сам элемент
+            this.showModal(modal);
         }
     }
 
@@ -44,25 +46,18 @@ class MainPage {
 
     setupEventListeners() {
         document.body.addEventListener('click', (e) => {
-            // Используем текстовые селекторы для вызова
-            // Строка для .login-btn удалена, так как логика перенесена в auth.js
             if (e.target.closest('.server-join-btn')) this.handleServerJoin();
             if (e.target.closest('.ip-btn')) this.copyIP(e.target.closest('.ip-btn'));
             
-            // Логика закрытия модальных окон
             const modalToClose = e.target.closest('.auth-container, .ip-modal');
-            if (e.target.closest('.close-auth, .close-ip-modal, .close-beta-warning-btn')) {
+            if (e.target.closest('.close-auth, .close-ip-modal, .close-beta-warning-btn') || e.target === modalToClose) {
                 if (modalToClose) {
                     this.hideModal(modalToClose);
                     if (modalToClose.id === 'betaWarningModal') sessionStorage.setItem('betaWarningShown', 'true');
                 }
             }
-            // Закрытие по клику на оверлей
-            if (modalToClose && e.target === modalToClose) {
-                this.hideModal(modalToClose);
-                if (modalToClose.id === 'betaWarningModal') sessionStorage.setItem('betaWarningShown', 'true');
-            }
         });
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 const activeModal = document.querySelector('.auth-container.active, .ip-modal.active');
@@ -72,31 +67,21 @@ class MainPage {
     }
     
     handleServerJoin() {
-        if (this.authManager.user) {
+        if (this.user) {
             this.showModal('#ipModal');
         } else {
-            this.authManager.signInWithDiscord(); // Предлагаем войти, если пользователь не авторизован
+            // Если пользователя нет, просим authManager начать вход
+            window.authManager.signInWithDiscord();
         }
     }
     
-    // ИСПРАВЛЕНО: Функция теперь принимает как строку-селектор, так и HTML-элемент
-    showModal(selectorOrElement) {
-        const element = typeof selectorOrElement === 'string' 
-            ? document.querySelector(selectorOrElement) 
-            : selectorOrElement;
-        if (element) {
-            element.classList.add('active');
-        }
+    showModal(selector) {
+        const element = document.querySelector(selector);
+        if (element) element.classList.add('active');
     }
 
-    // ИСПРАВЛЕНО: Функция теперь принимает как строку-селектор, так и HTML-элемент
-    hideModal(selectorOrElement) {
-        const element = typeof selectorOrElement === 'string' 
-            ? document.querySelector(selectorOrElement) 
-            : selectorOrElement;
-        if (element) {
-            element.classList.remove('active');
-        }
+    hideModal(element) {
+        if (element) element.classList.remove('active');
     }
 
     async copyIP(button) {
@@ -107,18 +92,16 @@ class MainPage {
             button.classList.add('copied');
             setTimeout(() => button.classList.remove('copied'), 1500);
         } catch (err) {
-            // Используем кастомное модальное окно вместо alert
             console.error('Не удалось скопировать IP:', err);
             alert('Не удалось скопировать IP. Скопируйте вручную: ' + ip);
         }
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const authManager = new AuthManager();
-    new MainPage(authManager);
-});
+// Запускаем логику главной страницы
+new MainPage();
 
+// Глобальная функция для скролла, оставляем как есть
 window.scrollToServers = function() {
     document.getElementById('servers-section')?.scrollIntoView({ behavior: 'smooth' });
 };
