@@ -1,5 +1,6 @@
 class AuthManager {
     constructor() {
+        // Инициализация Firebase с вашей конфигурацией
         const firebaseConfig = {
             apiKey: "AIzaSyDKPa0Q3kF5aR-N-u25GA2SpQ5MWBXnii4",
             authDomain: "cbworlds-a8b71.firebaseapp.com",
@@ -9,34 +10,41 @@ class AuthManager {
             appId: "1:769755269110:web:7716cbaf3a3d3d193369d7",
             measurementId: "G-VS3T407KK9"
         };
-
         firebase.initializeApp(firebaseConfig);
+
         this.auth = firebase.auth();
         this.db = firebase.firestore();
         this.user = null;
 
-        // Мы используем onAuthStateChanged как единственный источник правды о состоянии пользователя.
-        // Но чтобы обработать создание профиля после редиректа, нам нужно сначала
-        // проверить результат редиректа.
+        // НЕМЕДЛЕННО ПОКАЗЫВАЕМ СОСТОЯНИЕ ЗАГРУЗКИ
+        this.setLoadingState();
+
+        // Запускаем основной процесс аутентификации
         this.handleAuthentication();
 
+        // Слушатель для кнопки выхода
         document.addEventListener('click', (event) => {
             if (event.target.closest('.logout-btn')) this.signOut();
         });
     }
 
+    // НОВЫЙ МЕТОД: Устанавливает UI в режим ожидания
+    setLoadingState() {
+        const userSection = document.getElementById('userSection');
+        if (userSection) {
+            // Добавляем класс 'loading-auth' для стилизации
+            userSection.innerHTML = '<div class="login-btn loading-auth">Загрузка...</div>';
+        }
+    }
+
     async handleAuthentication() {
         try {
-            // Сначала пытаемся получить результат редиректа.
-            // Это выполнится только на странице, куда пользователь вернулся после входа.
+            // Сначала обрабатываем результат редиректа для создания профиля нового пользователя
             const result = await this.auth.getRedirectResult();
             if (result.user) {
-                // Если мы получили пользователя из редиректа, это может быть первый вход.
-                // Проверим, есть ли у него профиль в нашей БД.
                 const userDocRef = this.db.collection('profiles').doc(result.user.uid);
                 const userDoc = await userDocRef.get();
                 if (!userDoc.exists) {
-                    // Профиля нет - создаем его.
                     const profileData = {
                         username: result.user.displayName || 'Пользователь',
                         email: result.user.email,
@@ -50,20 +58,17 @@ class AuthManager {
             console.error("Ошибка обработки редиректа:", error);
         }
 
-        // Теперь, когда редирект обработан (или его не было),
-        // мы устанавливаем основной слушатель состояния авторизации.
-        // Он будет срабатывать всегда при загрузке страницы и при изменении статуса входа/выхода.
+        // onAuthStateChanged - единственный надежный источник статуса пользователя
         this.auth.onAuthStateChanged(async (firebaseUser) => {
             if (firebaseUser) {
-                // Пользователь вошел. Загружаем его профиль из Firestore.
+                // Пользователь есть, загружаем его профиль из Firestore
                 const userDocRef = this.db.collection('profiles').doc(firebaseUser.uid);
                 const userDoc = await userDocRef.get();
                 if (userDoc.exists) {
                     this.user = { uid: firebaseUser.uid, ...userDoc.data() };
                 } else {
-                    // Этот случай маловероятен, если логика редиректа сработала,
-                    // но это защита на случай, если пользователь есть в Auth, но нет в БД.
-                    console.warn("Профиль не найден, создается резервная копия.");
+                    // Редкий случай, если профиль не создался - создаем сейчас
+                    console.warn("Профиль не найден, создается резервный.");
                     const profileData = {
                         username: firebaseUser.displayName || 'Пользователь',
                         email: firebaseUser.email,
@@ -74,24 +79,24 @@ class AuthManager {
                     this.user = { uid: firebaseUser.uid, ...profileData };
                 }
             } else {
-                // Пользователь не вошел в систему.
+                // Пользователя нет
                 this.user = null;
             }
-            // Обновляем интерфейс и сообщаем другим скриптам о готовности.
+            // Как только статус определен, обновляем UI и оповещаем другие скрипты
             this.updateUIAndNotify();
         });
     }
-    
+
     updateUIAndNotify() {
-        // Закрываем модальное окно авторизации, если оно открыто
         document.querySelector('#authPage')?.classList.remove('active');
         this.updateUserUI(this.user);
-        // Отправляем событие, чтобы другие части сайта знали, что статус пользователя определен
         document.dispatchEvent(new CustomEvent('userStateReady', { detail: this.user }));
     }
 
     async signInWithDiscord() {
         const provider = new firebase.auth.OAuthProvider('oidc.openid-connect');
+        // Устанавливаем персистентность ДО редиректа
+        await this.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
         await this.auth.signInWithRedirect(provider);
     }
 
@@ -99,11 +104,10 @@ class AuthManager {
         document.body.classList.add('fade-out');
         setTimeout(async () => {
             await this.auth.signOut();
-            // После выхода всегда перенаправляем на главную
             window.location.href = 'index.html';
         }, 250);
     }
-    
+
     updateUserUI(user) {
         const userSection = document.getElementById('userSection');
         if (!userSection) return;
@@ -116,4 +120,44 @@ class AuthManager {
         }
     }
 }
+```eof
 
+### Шаг 2: Добавьте этот CSS в ваш `style.css`
+
+Просто добавь этот маленький блок в конец файла `style.css`. Он сделает кнопку "Загрузка..." неактивной и добавит анимацию, чтобы было понятно, что процесс идет.
+
+```css:style.css
+/* ... (весь ваш существующий CSS код) ... */
+
+/* Стили для состояния загрузки авторизации */
+.loading-auth {
+    cursor: wait !important;
+    opacity: 0.7;
+    position: relative;
+    color: var(--muted) !important;
+    background: transparent !important;
+    pointer-events: none;
+}
+
+.loading-auth::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid transparent;
+    border-top: 2px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Эта анимация у вас уже есть, но убедитесь, что она присутствует */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+```eof
+
+Я обновил оба файла в Canvas. После этих изменений проблема с авторизацией должна быть окончательно решена.
