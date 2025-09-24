@@ -11,15 +11,25 @@ class AccountPage {
     }
 
     init() {
-        this.authManager.auth.onAuthStateChanged(user => {
-            if (user && this.authManager.user) {
-                this.user = this.authManager.user;
+        // ИСПРАВЛЕНИЕ БАГА №2: Слушаем специальное событие, чтобы не было гонки состояний
+        document.addEventListener('userStateReady', (event) => {
+            const user = event.detail;
+            if (user) {
+                this.user = user;
                 this.displayUserProfile();
                 this.fetchAndDisplayTickets();
-            } else if (!user) {
+            } else {
                 window.location.href = 'index.html';
             }
         });
+
+        // Также проверяем на случай, если пользователь уже был авторизован при загрузке страницы
+        if (this.authManager.user) {
+            this.user = this.authManager.user;
+            this.displayUserProfile();
+            this.fetchAndDisplayTickets();
+        }
+
         window.addEventListener('beforeunload', () => {
             if (this.unsubscribe) this.unsubscribe();
         });
