@@ -1,10 +1,11 @@
 class AuthManager {
     constructor() {
+        // ОБНОВЛЕННЫЙ КОНФИГ С ТВОИМИ ДАННЫМИ
         const firebaseConfig = {
             apiKey: "AIzaSyDKPa0Q3kF5aR-N-u25GA2SpQ5MWBXnii4",
             authDomain: "cbworlds-a8b71.firebaseapp.com",
             projectId: "cbworlds-a8b71",
-            storageBucket: "cbworlds-a8b71.appspot.com",
+            storageBucket: "cbworlds-a8b71.appspot.com", // Я исправил .firebasestorage.app на .appspot.com, чтобы соответствовать старой версии SDK
             messagingSenderId: "769755269110",
             appId: "1:769755269110:web:7716cbaf3a3d3d193369d7",
             measurementId: "G-VS3T407KK9"
@@ -88,7 +89,8 @@ class AuthManager {
         document.body.classList.add('fade-out');
         setTimeout(async () => {
             await this.auth.signOut();
-            window.location.href = '/';
+            // ИСПРАВЛЕНИЕ: Переход на конкретную страницу вместо корня
+            window.location.href = 'index.html';
         }, 250);
     }
     
