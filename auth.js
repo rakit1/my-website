@@ -1,11 +1,25 @@
 class AuthManager {
     constructor() {
-        // --- ОБНОВЛЕНО ---
         this.SUPABASE_URL = "https://skhfhtlgwuegmfsmwvpc.supabase.co";
         this.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNraGZodGxnd3VlZ21mc213dnBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2Njg4OTQsImV4cCI6MjA3NDI0NDg5NH0.A9tuMEM7a7K88ypThbmOIjbU0RazTxS-gTuI6-nQf7Y";
-        // --- КОНЕЦ ОБНОВЛЕНИЯ ---
 
-        this.supabase = window.supabase.createClient(this.SUPABASE_URL, this.SUPABASE_ANON_KEY);
+        // --- КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ ЗДЕСЬ ---
+        // Мы добавляем специальные 'headers', чтобы разрешить вызов Edge Functions.
+        // Это должно исправить проблему с доступом.
+        const options = {
+            auth: {
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: true
+            },
+            global: {
+                headers: { 'x-functions-authorization': 'true' } 
+            }
+        };
+        
+        this.supabase = window.supabase.createClient(this.SUPABASE_URL, this.SUPABASE_ANON_KEY, options);
+        // --- КОНЕЦ ИЗМЕНЕНИЯ ---
+
 
         this.supabase.auth.getSession().then(({ data: { session } }) => {
             this.updateUserUI(session?.user);
