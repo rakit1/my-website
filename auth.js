@@ -16,11 +16,10 @@ class AuthManager {
         this.db = firebase.firestore();
         this.user = null;
 
-        // УЛУЧШЕНИЕ: Проверяем сессию, чтобы избежать мелькания "Проверки"
         if (sessionStorage.getItem('isLoggedIn') === 'true') {
-            this.setPlaceholderState(); // Мгновенно показываем временный профиль
+            this.setPlaceholderState();
         } else {
-            this.setLoadingState(); // Показываем "Проверку", если статус неизвестен
+            this.setLoadingState();
         }
 
         this.handleAuthentication();
@@ -37,7 +36,6 @@ class AuthManager {
         }
     }
     
-    // НОВЫЙ МЕТОД: Мгновенно отображает данные пользователя из сессии
     setPlaceholderState() {
         const userSection = document.getElementById('userSection');
         const name = sessionStorage.getItem('username');
@@ -45,32 +43,53 @@ class AuthManager {
         if (userSection && name) {
             this.updateUserUI({ username: name, avatar_url: avatarUrl });
         } else {
-            this.setLoadingState(); // Если данных в сессии нет, возвращаемся к "Проверке"
+            this.setLoadingState();
         }
     }
 
     handleAuthentication() {
+        // ИЗМЕНЕНО: Добавлена обработка результата после редиректа
+        this.auth.getRedirectResult()
+            .then(async (result) => {
+                if (result.user) {
+                    const firebaseUser = result.user;
+                    const userDocRef = this.db.collection('profiles').doc(firebaseUser.uid);
+                    const userDoc = await userDocRef.get();
+
+                    // Если профиля нет, создаем его. Это важно для новых пользователей.
+                    if (!userDoc.exists) {
+                        const profileData = {
+                            email: firebaseUser.email,
+                            username: result.additionalUserInfo.profile.username || firebaseUser.displayName,
+                            avatar_url: result.additionalUserInfo.profile.avatar ? `https://cdn.discordapp.com/avatars/${firebaseUser.providerData[0].uid}/${result.additionalUserInfo.profile.avatar}.png` : firebaseUser.photoURL,
+                            role: 'Игрок' // Роль по умолчанию
+                        };
+                        await userDocRef.set(profileData);
+                    }
+                }
+            }).catch((error) => {
+                console.error("Auth: Ошибка обработки редиректа:", error);
+            });
+
+        // Этот обработчик теперь сработает корректно после getRedirectResult
         this.auth.onAuthStateChanged(async (firebaseUser) => {
             if (firebaseUser) {
                 const userDocRef = this.db.collection('profiles').doc(firebaseUser.uid);
                 const userDoc = await userDocRef.get();
                 if (userDoc.exists) {
                     this.user = { uid: firebaseUser.uid, ...userDoc.data() };
-                    // Сохраняем статус в сессию
                     sessionStorage.setItem('isLoggedIn', 'true');
                     sessionStorage.setItem('username', this.user.username);
                     sessionStorage.setItem('avatar', this.user.avatar_url || '');
                 } else {
-                    // Обработка случая, когда профиля нет
+                    console.error("Пользователь авторизован, но профиль отсутствует.");
                     this.user = null;
                     sessionStorage.clear();
                 }
             } else {
                 this.user = null;
-                // Очищаем сессию при выходе
                 sessionStorage.clear();
             }
-            // Обновляем UI с актуальными данными от Firebase
             this.updateUIAndNotify();
         });
     }
@@ -81,10 +100,13 @@ class AuthManager {
     }
 
     async signInWithDiscord() {
-        const provider = new firebase.auth.OAuthProvider('oidc.openid-connect');
+        // ИЗМЕНЕНО: Указан правильный провайдер и добавлены 'scopes'
+        const provider = new firebase.auth.OAuthProvider('oidc.discord.com');
+        provider.addScope('identify');
+        provider.addScope('email');
+        
         try {
             await this.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-            // ИЗМЕНЕНО: signInWithPopup заменен на signInWithRedirect
             await this.auth.signInWithRedirect(provider);
         } catch (error) {
             console.error("Auth: Ошибка входа через REDIRECT:", error);
@@ -92,7 +114,7 @@ class AuthManager {
     }
 
     async signOut() {
-        sessionStorage.clear(); // Очищаем сессию принудительно при выходе
+        sessionStorage.clear();
         await this.auth.signOut();
         document.body.classList.add('fade-out');
         setTimeout(() => {
