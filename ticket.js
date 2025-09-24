@@ -64,8 +64,20 @@ class TicketPage {
             this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
             this.updateTicketUI();
             
+            // --- ИЗМЕНЕНИЕ ЗДЕСЬ: Заменяем вызов старой функции на новый, безопасный запрос ---
             const { data: messages, error: messagesError } = await this.supabase
-                .rpc('get_messages_for_ticket', { ticket_id_arg: this.ticketId });
+                .from('messages')
+                .select(`
+                    *,
+                    profiles (
+                        username,
+                        avatar_url,
+                        role
+                    )
+                `)
+                .eq('ticket_id', this.ticketId)
+                .order('created_at');
+            // --- КОНЕЦ ИЗМЕНЕНИЯ ---
 
             if (messagesError) throw messagesError;
             
@@ -87,7 +99,10 @@ class TicketPage {
     addMessageToBox(message) {
         if (document.querySelector(`[data-message-id="${message.id}"]`)) return;
         
+        // --- ИЗМЕНЕНИЕ: Теперь профиль всегда будет вложенным объектом ---
         const authorProfile = this.participants.get(message.user_id) || message.profiles || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
+        // --- КОНЕЦ ИЗМЕНЕНИЯ ---
+
         const isUserMessage = message.user_id === this.user.id;
         const isAdmin = authorProfile.role === 'Администратор';
 
@@ -170,7 +185,12 @@ class TicketPage {
                     const { data: profile } = await this.supabase.from('profiles').select('username, avatar_url, role').eq('id', newMessage.user_id).single();
                     if (profile) this.participants.set(newMessage.user_id, profile);
                 }
-                this.addMessageToBox(newMessage);
+                
+                // --- ИЗМЕНЕНИЕ: В payload нет вложенных данных, нужно их добавить для консистентности ---
+                const finalMessage = { ...newMessage, profiles: this.participants.get(newMessage.user_id) };
+                this.addMessageToBox(finalMessage);
+                // --- КОНЕЦ ИЗМЕНЕНИЯ ---
+
                 this.scrollToBottom();
             })
             .on('postgres_changes', {
@@ -197,7 +217,6 @@ class TicketPage {
         try {
             const { error } = await this.supabase.from('tickets').update({ is_closed: true }).eq('id', this.ticketId);
             if (error) throw error;
-            // Статус обновится через Realtime, локально менять не нужно для консистентности
             this.confirmationModal.classList.remove('active');
         } catch (error) {
             alert('Ошибка при закрытии тикета: ' + error.message);
@@ -207,7 +226,6 @@ class TicketPage {
     }
 
     updateTicketUI() {
-        // Показываем кнопку "Закрыть тикет" только админам
         if (this.isCurrentUserAdmin) {
             this.closeTicketButton.style.display = 'inline-flex';
         } else {
