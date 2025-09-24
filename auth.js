@@ -16,7 +16,7 @@ class AuthManager {
         this.db = firebase.firestore();
         this.user = null;
 
-        // НЕМЕДЛЕННО ПОКАЗЫВАЕМ СОСТОЯНИЕ ЗАГРУЗКИ
+        // Немедленно показываем состояние загрузки
         this.setLoadingState();
 
         // Запускаем основной процесс аутентификации
@@ -28,18 +28,16 @@ class AuthManager {
         });
     }
 
-    // НОВЫЙ МЕТОД: Устанавливает UI в режим ожидания
+    // Устанавливает UI в режим ожидания
     setLoadingState() {
         const userSection = document.getElementById('userSection');
         if (userSection) {
-            // Добавляем класс 'loading-auth' для стилизации
             userSection.innerHTML = '<div class="login-btn loading-auth">Загрузка...</div>';
         }
     }
 
     async handleAuthentication() {
         try {
-            // Сначала обрабатываем результат редиректа для создания профиля нового пользователя
             const result = await this.auth.getRedirectResult();
             if (result.user) {
                 const userDocRef = this.db.collection('profiles').doc(result.user.uid);
@@ -58,16 +56,13 @@ class AuthManager {
             console.error("Ошибка обработки редиректа:", error);
         }
 
-        // onAuthStateChanged - единственный надежный источник статуса пользователя
         this.auth.onAuthStateChanged(async (firebaseUser) => {
             if (firebaseUser) {
-                // Пользователь есть, загружаем его профиль из Firestore
                 const userDocRef = this.db.collection('profiles').doc(firebaseUser.uid);
                 const userDoc = await userDocRef.get();
                 if (userDoc.exists) {
                     this.user = { uid: firebaseUser.uid, ...userDoc.data() };
                 } else {
-                    // Редкий случай, если профиль не создался - создаем сейчас
                     console.warn("Профиль не найден, создается резервный.");
                     const profileData = {
                         username: firebaseUser.displayName || 'Пользователь',
@@ -79,10 +74,8 @@ class AuthManager {
                     this.user = { uid: firebaseUser.uid, ...profileData };
                 }
             } else {
-                // Пользователя нет
                 this.user = null;
             }
-            // Как только статус определен, обновляем UI и оповещаем другие скрипты
             this.updateUIAndNotify();
         });
     }
@@ -95,7 +88,6 @@ class AuthManager {
 
     async signInWithDiscord() {
         const provider = new firebase.auth.OAuthProvider('oidc.openid-connect');
-        // Устанавливаем персистентность ДО редиректа
         await this.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
         await this.auth.signInWithRedirect(provider);
     }
@@ -114,50 +106,13 @@ class AuthManager {
         if (user) {
             const name = user.username || 'Пользователь';
             const avatarUrl = user.avatar_url;
-            userSection.innerHTML = `<div class="user-info"><div class="user-dropdown"><div class="user-name"><div class="user-avatar" title="${name}">${avatarUrl ? `<img src="${avatarUrl}" alt="Аватар" style="width:100%;height:100%;border-radius:50%;">` : name.charAt(0).toUpperCase()}</div><span>${name}</span></div><div class="dropdown-menu"><a href="account.html" class="dropdown-item"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88a9.947 9.947 0 0 1 12.28 0C16.43 19.18 14.03 20 12 20z"></path></svg><span>Личный кабинет</span></a><button class="logout-btn dropdown-item"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM12 11H16V13H12V16L8 12L12 8V11Z"></path></svg><span>Выйти</span></button></div></div></div>`;
+            // ИСПРАВЛЕНИЕ: Заменил двойные кавычки в style на одинарные, чтобы избежать синтаксической ошибки.
+            const avatarImg = avatarUrl ? `<img src="${avatarUrl}" alt="Аватар" style='width:100%;height:100%;border-radius:50%;'>` : name.charAt(0).toUpperCase();
+            
+            userSection.innerHTML = `<div class="user-info"><div class="user-dropdown"><div class="user-name"><div class="user-avatar" title="${name}">${avatarImg}</div><span>${name}</span></div><div class="dropdown-menu"><a href="account.html" class="dropdown-item"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88a9.947 9.947 0 0 1 12.28 0C16.43 19.18 14.03 20 12 20z"></path></svg><span>Личный кабинет</span></a><button class="logout-btn dropdown-item"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM12 11H16V13H12V16L8 12L12 8V11Z"></path></svg><span>Выйти</span></button></div></div></div>`;
         } else {
             userSection.innerHTML = '<button class="login-btn">Войти</button>';
         }
     }
 }
-```eof
 
-### Шаг 2: Добавьте этот CSS в ваш `style.css`
-
-Просто добавь этот маленький блок в конец файла `style.css`. Он сделает кнопку "Загрузка..." неактивной и добавит анимацию, чтобы было понятно, что процесс идет.
-
-```css:style.css
-/* ... (весь ваш существующий CSS код) ... */
-
-/* Стили для состояния загрузки авторизации */
-.loading-auth {
-    cursor: wait !important;
-    opacity: 0.7;
-    position: relative;
-    color: var(--muted) !important;
-    background: transparent !important;
-    pointer-events: none;
-}
-
-.loading-auth::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 16px;
-    height: 16px;
-    margin: -8px 0 0 -8px;
-    border: 2px solid transparent;
-    border-top: 2px solid var(--primary);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-/* Эта анимация у вас уже есть, но убедитесь, что она присутствует */
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-```eof
-
-Я обновил оба файла в Canvas. После этих изменений проблема с авторизацией должна быть окончательно решена.
