@@ -3,233 +3,606 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Private Realtime Chat</title>
+    <title>Realtime Chat</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
-        :root {
-            --bg-color: #121212; --surface-color: #1e1e1e; --primary-color: #764abc;
-            --text-color: #e0e0e0; --text-muted: #888; --border-color: #333;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0; background-color: var(--bg-color); color: var(--text-color); overflow: hidden;
-        }
-        header {
-            background: var(--surface-color); padding: 15px 25px; display: flex;
-            justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color);
-        }
-        h1 { font-size: 1.2em; margin: 0; color: var(--primary-color); }
-        #user-section { display: flex; align-items: center; gap: 12px; }
-        .user-avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--primary-color); }
-        button { cursor: pointer; padding: 10px 16px; border: none; border-radius: 8px; background-color: var(--primary-color); color: white; font-weight: 600; transition: background-color 0.2s ease; }
-        button:hover { background-color: #5d3a9b; }
-
-        #app-layout { display: flex; height: calc(100vh - 70px); }
-        
-        #user-list-panel { width: 300px; background: var(--surface-color); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
-        #user-list-panel h2 { padding: 15px; margin: 0; font-size: 1em; border-bottom: 1px solid var(--border-color); }
-        #user-list { overflow-y: auto; flex-grow: 1; }
-        .user-item { display: flex; align-items: center; gap: 10px; padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); transition: background-color 0.2s; }
-        .user-item:hover { background-color: #2a2a2a; }
-        .user-item.active { background-color: var(--primary-color); }
-        .user-item-avatar { width: 40px; height: 40px; border-radius: 50%; }
-
-        #chat-view { flex-grow: 1; display: flex; flex-direction: column; }
-        #chat-placeholder { display: flex; justify-content: center; align-items: center; height: 100%; color: var(--text-muted); }
-        #chat-container { display: flex; flex-direction: column; height: 100%; }
-        #chat-header { padding: 15px 20px; border-bottom: 1px solid var(--border-color); font-weight: bold; }
-        #chat-box { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-        #message-form { display: flex; padding: 15px; border-top: 1px solid var(--border-color); }
-        #message-form input {
-            flex-grow: 1; background: var(--bg-color); border: 1px solid var(--border-color);
-            color: var(--text-color); padding: 12px; border-radius: 8px; font-size: 1em;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
         }
 
-        .message-wrapper { max-width: 75%; display: flex; flex-direction: column; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .message-author { font-size: 0.8em; color: var(--text-muted); margin-bottom: 5px; }
-        .message-content { padding: 10px 15px; border-radius: 18px; line-height: 1.4; word-break: break-word; }
-        .other { align-self: flex-start; align-items: flex-start; }
-        .other .message-content { background: #333; color: var(--text-color); border-bottom-left-radius: 4px; }
-        .user { align-self: flex-end; align-items: flex-end; }
-        .user .message-content { background: var(--primary-color); color: white; border-bottom-right-radius: 4px; }
-        .user .message-author { text-align: right; }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            min-height: 90vh;
+        }
+
+        /* Login Page */
+        .login-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .login-page h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .login-page p {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .discord-login-btn {
+            background: #5865F2;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .discord-login-btn:hover {
+            background: #4752c4;
+        }
+
+        /* Main Chat Layout */
+        .chat-container {
+            display: none;
+            height: 90vh;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-header {
+            padding: 20px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .logout-btn {
+            margin-left: auto;
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .conversations-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .conversation-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .conversation-item:hover {
+            background: #e9ecef;
+        }
+
+        .conversation-item.active {
+            background: #007bff;
+            color: white;
+        }
+
+        .user-search {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .search-results {
+            position: absolute;
+            background: white;
+            width: 260px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .search-result-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .search-result-item:hover {
+            background: #f8f9fa;
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 20px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .messages-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            max-width: 70%;
+        }
+
+        .message.own {
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .message-content {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 15px;
+            display: inline-block;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .message.own .message-content {
+            background: #007bff;
+            color: white;
+        }
+
+        .message-sender {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .message-input-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .message-input {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            font-size: 1em;
+            resize: none;
+            height: 50px;
+        }
+
+        .send-btn {
+            margin-top: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            float: right;
+        }
+
+        .send-btn:hover {
+            background: #0056b3;
+        }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Private Realtime Chat</h1>
-        <div id="user-section"> <button id="login-btn">Войти через Discord</button> </div>
-    </header>
+    <div class="container">
+        <!-- Login Page -->
+        <div id="loginPage" class="login-page">
+            <h1>Realtime Chat</h1>
+            <p>Войдите через Discord чтобы начать общение</p>
+            <button id="discordLogin" class="discord-login-btn">
+                <span>Войти через Discord</span>
+            </button>
+        </div>
 
-    <div id="app-layout" style="display: none;">
-        <aside id="user-list-panel">
-            <h2>Пользователи</h2>
-            <div id="user-list"></div>
-        </aside>
-        <main id="chat-view">
-            <div id="chat-placeholder"> <p>Выберите пользователя, чтобы начать диалог</p> </div>
-            <div id="chat-container" style="display: none;">
-                <header id="chat-header"></header>
-                <div id="chat-box"></div>
-                <form id="message-form">
-                    <input type="text" name="message" placeholder="Введите сообщение..." required autocomplete="off">
-                    <button type="submit">Отправить</button>
-                </form>
+        <!-- Main Chat Interface -->
+        <div id="chatContainer" class="chat-container">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="user-header">
+                    <img id="userAvatar" class="user-avatar" src="" alt="Avatar">
+                    <span id="userName"></span>
+                    <button id="logoutBtn" class="logout-btn">Выйти</button>
+                </div>
+
+                <div class="conversations-list" id="conversationsList">
+                    <!-- Список диалогов будет здесь -->
+                </div>
+
+                <div class="user-search">
+                    <input type="text" id="userSearch" class="search-input" placeholder="Найти пользователя...">
+                    <div id="searchResults" class="search-results hidden"></div>
+                </div>
             </div>
-        </main>
+
+            <!-- Chat Area -->
+            <div class="chat-area">
+                <div class="chat-header">
+                    <img id="chatUserAvatar" class="user-avatar" src="" alt="Avatar">
+                    <span id="chatUserName">Выберите диалог</span>
+                </div>
+
+                <div class="messages-container" id="messagesContainer">
+                    <!-- Сообщения будут здесь -->
+                </div>
+
+                <div class="message-input-area">
+                    <textarea id="messageInput" class="message-input" placeholder="Введите сообщение..." disabled></textarea>
+                    <button id="sendBtn" class="send-btn" disabled>Отправить</button>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const SUPABASE_URL = 'https://xwryezubbsiptptmrevk.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3cnllenViYnNpcHRwdG1yZXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3MzYwMDEsImV4cCI6MjA3NDMxMjAwMX0.Mg8s-r4eatA4402TXVVHk-DIhE5xT-N21eikjKbFMNE';
-            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Supabase конфигурация
+        const supabaseUrl = 'https://xwryezubbsiptptmrevk.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3cnllenViYnNpcHRwdG1yZXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3MzYwMDEsImV4cCI6MjA3NDMxMjAwMX0.Mg8s-r4eatA4402TXVVHk-DIhE5xT-N21eikjKbFMNE';
+        
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-            const userSection = document.getElementById('user-section');
-            const appLayout = document.getElementById('app-layout');
-            const userList = document.getElementById('user-list');
-            const chatPlaceholder = document.getElementById('chat-placeholder');
-            const chatContainer = document.getElementById('chat-container');
-            const chatHeader = document.getElementById('chat-header');
-            const chatBox = document.getElementById('chat-box');
-            const messageForm = document.getElementById('message-form');
+        // Элементы DOM
+        const loginPage = document.getElementById('loginPage');
+        const chatContainer = document.getElementById('chatContainer');
+        const discordLogin = document.getElementById('discordLogin');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userName = document.getElementById('userName');
+        const userAvatar = document.getElementById('userAvatar');
+        const conversationsList = document.getElementById('conversationsList');
+        const userSearch = document.getElementById('userSearch');
+        const searchResults = document.getElementById('searchResults');
+        const chatUserName = document.getElementById('chatUserName');
+        const chatUserAvatar = document.getElementById('chatUserAvatar');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
 
-            let currentUser = null;
-            let activeConversationId = null;
-            let realtimeSubscription = null;
+        let currentUser = null;
+        let currentConversation = null;
 
-            const setupAuth = async () => {
-                const { data: { session } } = await supabase.auth.getSession();
-                updateUI(session);
-                supabase.auth.onAuthStateChange((_event, session) => updateUI(session));
-            };
-
-            const updateUI = (session) => {
-                if (session && session.user) {
-                    currentUser = session.user;
-                    userSection.innerHTML = `<span>${currentUser.user_metadata.full_name}</span><img src="${currentUser.user_metadata.avatar_url}" alt="Аватар" class="user-avatar"><button id="logout-btn">Выйти</button>`;
-                    appLayout.style.display = 'flex';
-                    loadUsers();
-                } else {
-                    currentUser = null;
-                    userSection.innerHTML = '<button id="login-btn">Войти через Discord</button>';
-                    appLayout.style.display = 'none';
-                }
-            };
-
-            document.body.addEventListener('click', (e) => {
-                if (e.target.id === 'login-btn') supabase.auth.signInWithOAuth({ provider: 'discord' });
-                if (e.target.id === 'logout-btn') supabase.auth.signOut();
-            });
-
-            const loadUsers = async () => {
-                const { data, error } = await supabase.from('profiles').select('*').neq('id', currentUser.id);
-                if (error) { console.error("Ошибка загрузки пользователей:", error); return; }
-                
-                userList.innerHTML = '';
-                data.forEach(user => {
-                    const userDiv = document.createElement('div');
-                    userDiv.className = 'user-item';
-                    userDiv.innerHTML = `<img src="${user.avatar_url}" class="user-item-avatar"><p>${user.username}</p>`;
-                    userDiv.addEventListener('click', () => handleUserClick(user.id, user.username, userDiv));
-                    userList.appendChild(userDiv);
-                });
-            };
-
-            const handleUserClick = async (userId, username, element) => {
-                document.querySelectorAll('.user-item.active').forEach(el => el.classList.remove('active'));
-                element.classList.add('active');
-
-                // --- ИЗМЕНЕНИЕ: ВЫЗЫВАЕМ НОВУЮ, БЕЗОПАСНУЮ ФУНКЦИЮ ---
-                const { data, error } = await supabase.rpc('create_or_get_conversation', { other_user_id: userId });
-
-                if (error || !data || data.length === 0) { 
-                    console.error("Не удалось начать диалог:", error); 
-                    return; 
-                }
-                
-                activeConversationId = data[0].id;
-                loadConversation(username);
-            };
-
-            const loadConversation = async (username) => {
-                chatPlaceholder.style.display = 'none';
-                chatContainer.style.display = 'flex';
-                chatHeader.innerText = `Диалог с ${username}`;
-                
-                const { data, error } = await supabase.from('private_messages')
-                    .select('*, author:profiles(username, avatar_url)')
-                    .eq('conversation_id', activeConversationId)
-                    .order('created_at');
-
-                if (error) { console.error("Ошибка загрузки сообщений:", error); return; }
-
-                chatBox.innerHTML = '';
-                data.forEach(addMessageToBox);
-                scrollToBottom();
-                subscribeToConversation(activeConversationId);
-            };
+        // Инициализация приложения
+        async function initApp() {
+            const { data: { session } } = await supabase.auth.getSession();
             
-            const subscribeToConversation = (conversationId) => {
-                if (realtimeSubscription) realtimeSubscription.unsubscribe();
+            if (session) {
+                await handleUserLogin(session.user);
+            } else {
+                showLoginPage();
+            }
 
-                realtimeSubscription = supabase.channel(`conversation_${conversationId}`)
-                    .on('postgres_changes', {
-                        event: 'INSERT',
-                        schema: 'public',
-                        table: 'private_messages',
-                        filter: `conversation_id=eq.${conversationId}`
-                    }, async (payload) => {
-                        const newMessage = payload.new;
-                        if (newMessage.author_id === currentUser.id) return;
-
-                        const { data: profile } = await supabase.from('profiles').select('username').eq('id', newMessage.author_id).single();
-                        newMessage.author = profile;
-                        addMessageToBox(newMessage);
-                        scrollToBottom();
-                    })
-                    .subscribe();
-            };
-
-            const addMessageToBox = (message) => {
-                const wrapper = document.createElement('div');
-                const isUserMessage = message.author_id === currentUser.id;
-                wrapper.className = `message-wrapper ${isUserMessage ? 'user' : 'other'}`;
-                const authorName = isUserMessage ? 'Вы' : message.author.username;
-                wrapper.innerHTML = `<div class="message-author">${authorName}</div><div class="message-content">${escapeHTML(message.content)}</div>`;
-                chatBox.appendChild(wrapper);
-            };
-            
-            messageForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                if (!activeConversationId) return;
-                const input = e.target.elements.message;
-                const content = input.value.trim();
-                if (!content) return;
-
-                const { data, error } = await supabase.from('private_messages').insert({
-                    content,
-                    conversation_id: activeConversationId,
-                    author_id: currentUser.id
-                }).select('*, author:profiles(username)').single();
-                
-                if (error) {
-                    console.error("Ошибка отправки:", error);
-                } else {
-                    addMessageToBox(data);
-                    scrollToBottom();
-                    input.value = '';
+            // Слушаем изменения авторизации
+            supabase.auth.onAuthStateChange(async (event, session) => {
+                if (event === 'SIGNED_IN' && session) {
+                    await handleUserLogin(session.user);
+                } else if (event === 'SIGNED_OUT') {
+                    showLoginPage();
                 }
             });
-            
-            const scrollToBottom = () => { chatBox.scrollTop = chatBox.scrollHeight; };
-            const escapeHTML = (str) => {
-                const p = document.createElement("p"); p.textContent = str; return p.innerHTML;
-            };
+        }
 
-            setupAuth();
+        // Обработка входа пользователя
+        async function handleUserLogin(user) {
+            currentUser = user;
+            
+            // Создаем или обновляем профиль пользователя
+            const { data: profile } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (!profile) {
+                // Получаем данные из Discord (упрощенно)
+                const discordData = {
+                    discord_id: user.user_metadata.provider_id,
+                    discord_username: user.user_metadata.full_name || user.email,
+                    discord_avatar: user.user_metadata.avatar_url,
+                    email: user.email
+                };
+
+                await supabase
+                    .from('users')
+                    .insert([{ id: user.id, ...discordData }]);
+            }
+
+            showChatInterface(user);
+            loadUserConversations();
+            setupRealtime();
+        }
+
+        // Показать страницу входа
+        function showLoginPage() {
+            loginPage.style.display = 'flex';
+            chatContainer.style.display = 'none';
+        }
+
+        // Показать интерфейс чата
+        function showChatInterface(user) {
+            loginPage.style.display = 'none';
+            chatContainer.style.display = 'flex';
+            
+            userName.textContent = user.user_metadata.full_name || user.email;
+            userAvatar.src = user.user_metadata.avatar_url || '';
+        }
+
+        // Загрузка диалогов пользователя
+        async function loadUserConversations() {
+            const { data: conversations, error } = await supabase
+                .rpc('get_user_conversations', { user_uuid: currentUser.id });
+
+            if (error) {
+                console.error('Error loading conversations:', error);
+                return;
+            }
+
+            conversationsList.innerHTML = '';
+            conversations.forEach(conv => {
+                const convElement = document.createElement('div');
+                convElement.className = 'conversation-item';
+                convElement.innerHTML = `
+                    <img src="${conv.other_user_avatar || ''}" class="user-avatar" alt="Avatar">
+                    <div>
+                        <div>${conv.other_user_username}</div>
+                        <div style="font-size: 0.8em; color: #666;">${conv.last_message || 'Нет сообщений'}</div>
+                    </div>
+                `;
+                convElement.onclick = () => selectConversation(conv.conversation_id, conv);
+                conversationsList.appendChild(convElement);
+            });
+        }
+
+        // Поиск пользователей
+        userSearch.addEventListener('input', async (e) => {
+            const searchTerm = e.target.value.trim();
+            
+            if (searchTerm.length < 2) {
+                searchResults.classList.add('hidden');
+                return;
+            }
+
+            const { data: users, error } = await supabase
+                .from('users')
+                .select('*')
+                .neq('id', currentUser.id)
+                .ilike('discord_username', `%${searchTerm}%`)
+                .limit(10);
+
+            if (error) {
+                console.error('Search error:', error);
+                return;
+            }
+
+            searchResults.innerHTML = '';
+            users.forEach(user => {
+                const userElement = document.createElement('div');
+                userElement.className = 'search-result-item';
+                userElement.innerHTML = `
+                    <img src="${user.discord_avatar || ''}" class="user-avatar" alt="Avatar">
+                    <span>${user.discord_username}</span>
+                `;
+                userElement.onclick = () => startConversation(user);
+                searchResults.appendChild(userElement);
+            });
+
+            searchResults.classList.remove('hidden');
         });
+
+        // Начать новый диалог
+        async function startConversation(user) {
+            const { data: conversationId, error } = await supabase
+                .rpc('create_conversation', {
+                    user1_id: currentUser.id,
+                    user2_id: user.id
+                });
+
+            if (error) {
+                console.error('Error creating conversation:', error);
+                return;
+            }
+
+            userSearch.value = '';
+            searchResults.classList.add('hidden');
+            loadUserConversations();
+        }
+
+        // Выбрать диалог
+        async function selectConversation(conversationId, conversationData) {
+            currentConversation = conversationId;
+            
+            // Обновляем заголовок чата
+            chatUserName.textContent = conversationData.other_user_username;
+            chatUserAvatar.src = conversationData.other_user_avatar || '';
+
+            // Активируем поле ввода
+            messageInput.disabled = false;
+            sendBtn.disabled = false;
+
+            // Загружаем сообщения
+            const { data: messages, error } = await supabase
+                .from('messages')
+                .select(`
+                    *,
+                    user:users(discord_username, discord_avatar)
+                `)
+                .eq('conversation_id', conversationId)
+                .order('created_at', { ascending: true });
+
+            if (error) {
+                console.error('Error loading messages:', error);
+                return;
+            }
+
+            displayMessages(messages);
+        }
+
+        // Отображение сообщений
+        function displayMessages(messages) {
+            messagesContainer.innerHTML = '';
+            messages.forEach(message => {
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${message.user_id === currentUser.id ? 'own' : ''}`;
+                messageElement.innerHTML = `
+                    ${message.user_id !== currentUser.id ? 
+                        `<div class="message-sender">${message.user.discord_username}</div>` : ''}
+                    <div class="message-content">${message.content}</div>
+                `;
+                messagesContainer.appendChild(messageElement);
+            });
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Отправка сообщения
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            const content = messageInput.value.trim();
+            if (!content || !currentConversation) return;
+
+            const { error } = await supabase
+                .from('messages')
+                .insert([{
+                    conversation_id: currentConversation,
+                    user_id: currentUser.id,
+                    content: content
+                }]);
+
+            if (error) {
+                console.error('Error sending message:', error);
+                return;
+            }
+
+            messageInput.value = '';
+        }
+
+        // Настройка realtime подписки
+        function setupRealtime() {
+            // Слушаем новые сообщения
+            supabase
+                .channel('messages')
+                .on('postgres_changes', 
+                    { 
+                        event: 'INSERT', 
+                        schema: 'public', 
+                        table: 'messages' 
+                    },
+                    (payload) => {
+                        if (currentConversation === payload.new.conversation_id) {
+                            // Добавляем новое сообщение в чат
+                            const messageElement = document.createElement('div');
+                            messageElement.className = `message ${payload.new.user_id === currentUser.id ? 'own' : ''}`;
+                            messageElement.innerHTML = `
+                                ${payload.new.user_id !== currentUser.id ? 
+                                    `<div class="message-sender">Загрузка...</div>` : ''}
+                                <div class="message-content">${payload.new.content}</div>
+                            `;
+                            messagesContainer.appendChild(messageElement);
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        }
+                    }
+                )
+                .subscribe();
+        }
+
+        // Вход через Discord
+        discordLogin.addEventListener('click', async () => {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'discord',
+                options: {
+                    redirectTo: window.location.origin
+                }
+            });
+            
+            if (error) console.error('Login error:', error);
+        });
+
+        // Выход
+        logoutBtn.addEventListener('click', async () => {
+            await supabase.auth.signOut();
+        });
+
+        // Запуск приложения
+        initApp();
     </script>
 </body>
 </html>
