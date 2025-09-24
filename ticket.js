@@ -64,12 +64,12 @@ class TicketPage {
             this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
             this.updateTicketUI();
             
-            // --- ИЗМЕНЕНИЕ ЗДЕСЬ: Указываем Supabase, как связать `messages` и `profiles` ---
+            // --- FINAL FIX HERE: This now uses the simple, correct syntax ---
             const { data: messages, error: messagesError } = await this.supabase
                 .from('messages')
                 .select(`
                     *,
-                    profiles:user_id (
+                    profiles (
                         username,
                         avatar_url,
                         role
@@ -77,7 +77,7 @@ class TicketPage {
                 `)
                 .eq('ticket_id', this.ticketId)
                 .order('created_at');
-            // --- КОНЕЦ ИЗМЕНЕНИЯ ---
+            // --- END OF FIX ---
 
             if (messagesError) throw messagesError;
             
