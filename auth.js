@@ -1,7 +1,10 @@
 class AuthManager {
     constructor() {
-        this.SUPABASE_URL = "https://egskxyxgzdidfbxhjaud.supabase.co";
-        this.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2t4eXhnemRpZGZieGhqYXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTA2MDcsImV4cCI6MjA3MzYyNjYwN30.X60gkf8hj0YEKzLdCFOOXRAlfDJ2AoINoJHY8qPeDFw";
+        // --- ОБНОВЛЕНО ---
+        this.SUPABASE_URL = "https://skhfhtlgwuegmfsmwvpc.supabase.co";
+        this.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNraGZodGxnd3VlZ21mc213dnBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2Njg4OTQsImV4cCI6MjA3NDI0NDg5NH0.A9tuMEM7a7K88ypThbmOIjbU0RazTxS-gTuI6-nQf7Y";
+        // --- КОНЕЦ ОБНОВЛЕНИЯ ---
+
         this.supabase = window.supabase.createClient(this.SUPABASE_URL, this.SUPABASE_ANON_KEY);
 
         this.supabase.auth.getSession().then(({ data: { session } }) => {
@@ -12,7 +15,6 @@ class AuthManager {
             this.updateUserUI(session?.user);
         });
 
-        // ИСПРАВЛЕНИЕ: Гарантируем, что кнопка выхода работает на любой странице
         document.addEventListener('click', (event) => {
             if (event.target.closest('.logout-btn')) {
                 this.signOut();
@@ -34,7 +36,6 @@ class AuthManager {
         document.body.classList.add('fade-out');
         setTimeout(async () => {
             await this.supabase.auth.signOut();
-            // Всегда перенаправляем на главную страницу
             window.location.href = '/'; 
         }, 250);
     }
