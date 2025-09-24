@@ -1,32 +1,43 @@
 class AuthManager {
     constructor() {
-        this.SUPABASE_URL = "https://skhfhtlgwuegmfsmwvpc.supabase.co";
-        this.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNraGZodGxnd3VlZ21mc213dnBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2Njg4OTQsImV4cCI6MjA3NDI0NDg5NH0.A9tuMEM7a7K88ypThbmOIjbU0RazTxS-gTuI6-nQf7Y";
-
-        // --- КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ ЗДЕСЬ ---
-        // Мы добавляем специальные 'headers', чтобы разрешить вызов Edge Functions.
-        // Это должно исправить проблему с доступом.
-        const options = {
-            auth: {
-                autoRefreshToken: true,
-                persistSession: true,
-                detectSessionInUrl: true
-            },
-            global: {
-                headers: { 'x-functions-authorization': 'true' } 
-            }
+        // --- Вставьте сюда ваши данные из Firebase ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDKPa0Q3kF5aR-N-u25GA2SpQ5MWBXnii4",
+            authDomain: "cbworlds-a8b71.firebaseapp.com",
+            projectId: "cbworlds-a8b71",
+            storageBucket: "cbworlds-a8b71.appspot.com",
+            messagingSenderId: "769755269110",
+            appId: "1:769755269110:web:7716cbaf3a3d3d193369d7",
+            measurementId: "G-VS3T407KK9"
         };
-        
-        this.supabase = window.supabase.createClient(this.SUPABASE_URL, this.SUPABASE_ANON_KEY, options);
-        // --- КОНЕЦ ИЗМЕНЕНИЯ ---
 
+        // Инициализация Firebase
+        this.app = firebase.initializeApp(firebaseConfig);
+        this.auth = firebase.getAuth(this.app);
+        this.db = firebase.getFirestore(this.app);
+        this.user = null; // Здесь будет храниться информация о пользователе
 
-        this.supabase.auth.getSession().then(({ data: { session } }) => {
-            this.updateUserUI(session?.user);
-        });
-        
-        this.supabase.auth.onAuthStateChange((event, session) => {
-            this.updateUserUI(session?.user);
+        this.auth.onAuthStateChanged(async (firebaseUser) => {
+            if (firebaseUser) {
+                const userDocRef = firebase.firestore().collection('profiles').doc(firebaseUser.uid);
+                const userDoc = await userDocRef.get();
+
+                if (userDoc.exists()) {
+                    this.user = { uid: firebaseUser.uid, ...userDoc.data() };
+                } else {
+                    const profileData = {
+                        username: firebaseUser.displayName || 'Пользователь',
+                        email: firebaseUser.email,
+                        avatar_url: firebaseUser.photoURL,
+                        role: 'Игрок'
+                    };
+                    await userDocRef.set(profileData);
+                    this.user = { uid: firebaseUser.uid, ...profileData };
+                }
+            } else {
+                this.user = null;
+            }
+            this.updateUserUI(this.user);
         });
 
         document.addEventListener('click', (event) => {
@@ -37,30 +48,30 @@ class AuthManager {
     }
 
     async signInWithDiscord() {
-        await this.supabase.auth.signInWithOAuth({
-            provider: 'discord',
-            options: { 
-                redirectTo: window.location.origin,
-                scopes: 'identify email'
-            }
-        });
+        const provider = new firebase.auth.OAuthProvider('oidc.OpenIDConnect');
+        try {
+            await this.auth.signInWithPopup(provider);
+        } catch (error) {
+            console.error("Ошибка входа через OpenID Connect (Discord):", error);
+            alert("Не удалось войти через Discord. Попробуйте еще раз.");
+        }
     }
 
     async signOut() {
         document.body.classList.add('fade-out');
         setTimeout(async () => {
-            await this.supabase.auth.signOut();
-            window.location.href = '/'; 
+            await this.auth.signOut();
+            window.location.href = '/';
         }, 250);
     }
-
+    
     updateUserUI(user) {
         const userSection = document.getElementById('userSection');
         if (!userSection) return;
 
         if (user) {
-            const name = user.user_metadata?.full_name || user.email || 'Пользователь';
-            const avatarUrl = user.user_metadata?.avatar_url;
+            const name = user.username || 'Пользователь';
+            const avatarUrl = user.avatar_url;
             userSection.innerHTML = `
                 <div class="user-info">
                     <div class="user-dropdown">
