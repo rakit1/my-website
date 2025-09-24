@@ -1,40 +1,48 @@
 class AccountPage {
-    constructor(authManager) {
-        this.authManager = authManager;
-        this.db = authManager.db;
+    constructor() {
+        this.db = firebase.firestore();
         this.user = null;
         this.profileCard = document.getElementById('user-profile-card');
         this.ticketsList = document.getElementById('tickets-list');
         this.adminPanelSection = document.getElementById('admin-panel-section');
         this.unsubscribe = null;
-        this.init();
-    }
 
-    init() {
+        // Ждем события 'userStateReady' от auth.js
         document.addEventListener('userStateReady', (event) => {
             const user = event.detail;
             if (user) {
                 this.user = user;
                 this.run();
             } else {
+                // Если пользователя нет, перенаправляем на главную
                 window.location.href = 'index.html';
             }
-        });
-        window.addEventListener('beforeunload', () => {
-            if (this.unsubscribe) this.unsubscribe();
         });
     }
 
     run() {
         this.displayUserProfile();
         this.fetchAndDisplayTickets();
+        // Отписываемся от слушателя при уходе со страницы
+        window.addEventListener('beforeunload', () => {
+            if (this.unsubscribe) this.unsubscribe();
+        });
     }
 
     displayUserProfile() {
         if (!this.user || !this.profileCard) return;
         const { username, email, avatar_url, role = 'Игрок' } = this.user;
         const roleClass = role === 'Администратор' ? 'administrator' : 'player';
-        this.profileCard.innerHTML = `<div class="profile-avatar">${avatar_url ? `<img src="${avatar_url}" alt="Аватар">` : username.charAt(0).toUpperCase()}</div><h1 class="profile-name">${username}</h1><span class="user-role ${roleClass}">${role}</span><p class="profile-email">${email}</p>`;
+        const avatarImg = (avatar_url && avatar_url !== 'null')
+            ? `<img src="${avatar_url}" alt="Аватар">`
+            : username.charAt(0).toUpperCase();
+
+        this.profileCard.innerHTML = `
+            <div class="profile-avatar">${avatarImg}</div>
+            <h1 class="profile-name">${username}</h1>
+            <span class="user-role ${roleClass}">${role}</span>
+            <p class="profile-email">${email || 'Email не указан'}</p>`;
+            
         if (role === 'Администратор') {
             this.adminPanelSection.innerHTML = `<a href="admin.html" class="admin-panel-button">Отвечать на тикеты<span class="ticket-count">...</span></a>`;
             this.subscribeToTicketCount();
@@ -48,7 +56,8 @@ class AccountPage {
             .onSnapshot(snapshot => {
                 ticketCountElement.textContent = snapshot.size;
             }, error => {
-                console.error("Ошибка real-time:", error);
+                console.error("Ошибка получения количества тикетов:", error);
+                ticketCountElement.textContent = 'X';
             });
     }
 
@@ -59,11 +68,23 @@ class AccountPage {
             if (!snapshot.empty) {
                 this.ticketsList.innerHTML = snapshot.docs.map(doc => {
                     const ticket = doc.data();
-                    const date = ticket.created_at ? new Date(ticket.created_at.toDate()).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'}) : '...';
+                    const date = ticket.created_at ? new Date(ticket.created_at.toDate()).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'}) : 'Дата неизвестна';
                     const status = ticket.is_closed ? '<span class="ticket-status closed">Закрыт</span>' : '<span class="open-ticket-btn">Посмотреть</span>';
-                    // ИЗМЕНЕНО: Отображаем ticket_number вместо doc.id
-                    const ticketDisplayId = ticket.ticket_number ? `#${ticket.ticket_number}` : `#${doc.id.substring(0,6)}`;
-                    return `<a href="ticket.html?id=${doc.id}" class="ticket-card-link"><div class="ticket-card"><div><span class="ticket-id">Тикет ${ticketDisplayId}</span><p class="ticket-description">${ticket.description}</p></div><div class="ticket-footer"><span class="ticket-date">Создано: ${date}</span>${status}</div></div></a>`;
+                    const ticketDisplayId = ticket.ticket_number ? `#${ticket.ticket_number}` : `#${doc.id.substring(0, 6)}`;
+                    
+                    return `
+                        <a href="ticket.html?id=${doc.id}" class="ticket-card-link">
+                            <div class="ticket-card">
+                                <div>
+                                    <span class="ticket-id">Тикет ${ticketDisplayId}</span>
+                                    <p class="ticket-description">${ticket.description}</p>
+                                </div>
+                                <div class="ticket-footer">
+                                    <span class="ticket-date">Создано: ${date}</span>
+                                    ${status}
+                                </div>
+                            </div>
+                        </a>`;
                 }).join('');
             } else {
                 this.ticketsList.innerHTML = '<p class="no-tickets-message">У вас пока нет обращений в поддержку.</p>';
@@ -75,7 +96,7 @@ class AccountPage {
     }
 }
 
+// Запускаем логику страницы
 document.addEventListener('DOMContentLoaded', () => {
-    const authManager = new AuthManager();
-    new AccountPage(authManager);
+    new AccountPage();
 });
