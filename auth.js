@@ -1,11 +1,10 @@
 class AuthManager {
     constructor() {
-        // ОБНОВЛЕННЫЙ КОНФИГ С ТВОИМИ ДАННЫМИ
         const firebaseConfig = {
             apiKey: "AIzaSyDKPa0Q3kF5aR-N-u25GA2SpQ5MWBXnii4",
             authDomain: "cbworlds-a8b71.firebaseapp.com",
             projectId: "cbworlds-a8b71",
-            storageBucket: "cbworlds-a8b71.appspot.com", // Я исправил .firebasestorage.app на .appspot.com, чтобы соответствовать старой версии SDK
+            storageBucket: "cbworlds-a8b71.appspot.com",
             messagingSenderId: "769755269110",
             appId: "1:769755269110:web:7716cbaf3a3d3d193369d7",
             measurementId: "G-VS3T407KK9"
@@ -15,73 +14,84 @@ class AuthManager {
         this.auth = firebase.auth();
         this.db = firebase.firestore();
         this.user = null;
-        this.isProcessingRedirect = true; // Флаг, что мы ждем результат редиректа
 
-        this.handleRedirectResult();
-
-        this.auth.onAuthStateChanged(async (firebaseUser) => {
-            if (this.isProcessingRedirect) return; // Если все еще обрабатываем редирект, ждем
-
-            if (firebaseUser) {
-                await this.loadUserProfile(firebaseUser);
-            } else {
-                this.user = null;
-                this.updateUIAndNotify();
-            }
-        });
+        // Мы используем onAuthStateChanged как единственный источник правды о состоянии пользователя.
+        // Но чтобы обработать создание профиля после редиректа, нам нужно сначала
+        // проверить результат редиректа.
+        this.handleAuthentication();
 
         document.addEventListener('click', (event) => {
             if (event.target.closest('.logout-btn')) this.signOut();
         });
     }
 
-    async handleRedirectResult() {
+    async handleAuthentication() {
         try {
+            // Сначала пытаемся получить результат редиректа.
+            // Это выполнится только на странице, куда пользователь вернулся после входа.
             const result = await this.auth.getRedirectResult();
             if (result.user) {
-                await this.loadUserProfile(result.user);
+                // Если мы получили пользователя из редиректа, это может быть первый вход.
+                // Проверим, есть ли у него профиль в нашей БД.
+                const userDocRef = this.db.collection('profiles').doc(result.user.uid);
+                const userDoc = await userDocRef.get();
+                if (!userDoc.exists) {
+                    // Профиля нет - создаем его.
+                    const profileData = {
+                        username: result.user.displayName || 'Пользователь',
+                        email: result.user.email,
+                        avatar_url: result.user.photoURL,
+                        role: 'Игрок'
+                    };
+                    await userDocRef.set(profileData);
+                }
             }
         } catch (error) {
             console.error("Ошибка обработки редиректа:", error);
-        } finally {
-            this.isProcessingRedirect = false; // Завершили обработку
-            // Если после обработки редиректа пользователя нет, onAuthStateChanged позаботится об этом
-            if (!this.auth.currentUser) {
-                this.user = null;
-                this.updateUIAndNotify();
-            }
         }
-    }
 
-    async loadUserProfile(firebaseUser) {
-        const userDocRef = this.db.collection('profiles').doc(firebaseUser.uid);
-        const userDoc = await userDocRef.get();
-        if (userDoc.exists) {
-            this.user = { uid: firebaseUser.uid, ...userDoc.data() };
-        } else {
-            const profileData = {
-                username: firebaseUser.displayName || 'Пользователь',
-                email: firebaseUser.email,
-                avatar_url: firebaseUser.photoURL,
-                role: 'Игрок'
-            };
-            await userDocRef.set(profileData);
-            this.user = { uid: firebaseUser.uid, ...profileData };
-        }
-        this.updateUIAndNotify();
+        // Теперь, когда редирект обработан (или его не было),
+        // мы устанавливаем основной слушатель состояния авторизации.
+        // Он будет срабатывать всегда при загрузке страницы и при изменении статуса входа/выхода.
+        this.auth.onAuthStateChanged(async (firebaseUser) => {
+            if (firebaseUser) {
+                // Пользователь вошел. Загружаем его профиль из Firestore.
+                const userDocRef = this.db.collection('profiles').doc(firebaseUser.uid);
+                const userDoc = await userDocRef.get();
+                if (userDoc.exists) {
+                    this.user = { uid: firebaseUser.uid, ...userDoc.data() };
+                } else {
+                    // Этот случай маловероятен, если логика редиректа сработала,
+                    // но это защита на случай, если пользователь есть в Auth, но нет в БД.
+                    console.warn("Профиль не найден, создается резервная копия.");
+                    const profileData = {
+                        username: firebaseUser.displayName || 'Пользователь',
+                        email: firebaseUser.email,
+                        avatar_url: firebaseUser.photoURL,
+                        role: 'Игрок'
+                    };
+                    await userDocRef.set(profileData);
+                    this.user = { uid: firebaseUser.uid, ...profileData };
+                }
+            } else {
+                // Пользователь не вошел в систему.
+                this.user = null;
+            }
+            // Обновляем интерфейс и сообщаем другим скриптам о готовности.
+            this.updateUIAndNotify();
+        });
     }
     
     updateUIAndNotify() {
-        // Баг #1: Закрываем модальное окно, если оно есть
+        // Закрываем модальное окно авторизации, если оно открыто
         document.querySelector('#authPage')?.classList.remove('active');
         this.updateUserUI(this.user);
-        // Сообщаем всему сайту, что мы закончили все проверки
+        // Отправляем событие, чтобы другие части сайта знали, что статус пользователя определен
         document.dispatchEvent(new CustomEvent('userStateReady', { detail: this.user }));
     }
 
     async signInWithDiscord() {
         const provider = new firebase.auth.OAuthProvider('oidc.openid-connect');
-        // Баг #4: Вход через редирект
         await this.auth.signInWithRedirect(provider);
     }
 
@@ -89,7 +99,7 @@ class AuthManager {
         document.body.classList.add('fade-out');
         setTimeout(async () => {
             await this.auth.signOut();
-            // ИСПРАВЛЕНИЕ: Переход на конкретную страницу вместо корня
+            // После выхода всегда перенаправляем на главную
             window.location.href = 'index.html';
         }, 250);
     }
@@ -106,3 +116,4 @@ class AuthManager {
         }
     }
 }
+
