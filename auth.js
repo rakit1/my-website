@@ -84,10 +84,10 @@ class AuthManager {
         const provider = new firebase.auth.OAuthProvider('oidc.openid-connect');
         try {
             await this.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-            await this.auth.signInWithPopup(provider);
-            // После успешного входа onAuthStateChanged все обработает
+            // ИЗМЕНЕНО: signInWithPopup заменен на signInWithRedirect
+            await this.auth.signInWithRedirect(provider);
         } catch (error) {
-            console.error("Auth: Ошибка входа через POPUP:", error);
+            console.error("Auth: Ошибка входа через REDIRECT:", error);
         }
     }
 
@@ -112,7 +112,6 @@ class AuthManager {
             userSection.innerHTML = '<button class="login-btn">Войти</button>';
             const loginBtn = userSection.querySelector('.login-btn');
             if(loginBtn) {
-                 // ИЗМЕНЕНО: Прямой вызов авторизации без модального окна
                  loginBtn.addEventListener('click', () => this.signInWithDiscord());
             }
         }
