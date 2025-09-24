@@ -47,7 +47,11 @@ class TicketPage {
             if (!ticketDoc.exists) throw new Error("Тикет не найден.");
             const ticketData = ticketDoc.data();
             if (!this.isCurrentUserAdmin && ticketData.user_id !== this.user.uid) throw new Error("У вас нет доступа к этому тикету.");
-            this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
+            
+            // ИЗМЕНЕНО: Отображаем ticket_number в заголовке
+            const ticketDisplayId = ticketData.ticket_number ? `#${ticketData.ticket_number}` : `#${this.ticketId.substring(0,6)}`;
+            this.ticketTitle.textContent = `Тикет ${ticketDisplayId}`;
+
             const currentUserProfile = await this.db.collection('profiles').doc(this.user.uid).get();
             if (currentUserProfile.exists) this.participants.set(this.user.uid, currentUserProfile.data());
             this.subscribeToUpdates();
@@ -106,7 +110,6 @@ class TicketPage {
         const wrapper = document.createElement('div');
         wrapper.className = `message-wrapper ${message.user_id === this.user.uid ? 'user' : 'admin'}`;
         wrapper.dataset.messageId = messageId;
-        // ИСПРАВЛЕНИЕ: Добавлена проверка на существование даты
         const date = message.created_at ? new Date(message.created_at.toDate()).toLocaleString('ru-RU') : 'отправка...';
         const avatarHTML = author.avatar_url ? `<img src="${author.avatar_url}" alt="Аватар">` : `<div class="message-avatar-placeholder">${(author.username || 'U').charAt(0).toUpperCase()}</div>`;
         wrapper.innerHTML = `<div class="message-header"><div class="message-avatar">${avatarHTML}</div><div class="message-author ${author.role === 'Администратор' ? 'admin-role' : ''}">${author.username || 'Пользователь'}</div></div><div class="message"><p>${message.content}</p><span>${date}</span></div>`;
