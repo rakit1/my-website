@@ -59,7 +59,8 @@ class AccountPage {
             if (!snapshot.empty) {
                 this.ticketsList.innerHTML = snapshot.docs.map(doc => {
                     const ticket = doc.data();
-                    const date = new Date(ticket.created_at.toDate()).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'});
+                    // ИСПРАВЛЕНИЕ: Добавлена проверка на существование даты
+                    const date = ticket.created_at ? new Date(ticket.created_at.toDate()).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'}) : '...';
                     const status = ticket.is_closed ? '<span class="ticket-status closed">Закрыт</span>' : '<span class="open-ticket-btn">Посмотреть</span>';
                     return `<a href="ticket.html?id=${doc.id}" class="ticket-card-link"><div class="ticket-card"><div><span class="ticket-id">Тикет #${doc.id}</span><p class="ticket-description">${ticket.description}</p></div><div class="ticket-footer"><span class="ticket-date">Создано: ${date}</span>${status}</div></div></a>`;
                 }).join('');
