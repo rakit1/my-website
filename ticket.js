@@ -23,17 +23,22 @@ class TicketPage {
 
     init() {
         if (!this.ticketId) return window.location.href = 'account.html';
-        this.authManager.auth.onAuthStateChanged(user => {
-            if (user && this.authManager.user) {
-                this.user = this.authManager.user;
+        document.addEventListener('userStateReady', (event) => {
+            const user = event.detail;
+            if (user) {
+                this.user = user;
                 this.isCurrentUserAdmin = this.user.role === 'Администратор';
-                this.loadInitialData();
-                this.setupEventListeners();
-            } else if (!user) {
+                this.run();
+            } else {
                 window.location.href = 'index.html';
             }
         });
         window.addEventListener('beforeunload', () => this.destroy());
+    }
+
+    run() {
+        this.loadInitialData();
+        this.setupEventListeners();
     }
 
     async loadInitialData() {
@@ -72,9 +77,6 @@ class TicketPage {
                     if (change.type === "added") this.addMessageToBox(change.doc.id, change.doc.data());
                 });
                 this.scrollToBottom();
-            }, error => {
-                console.error("Ошибка real-time:", error);
-                this.showError("Не удалось загрузить сообщения.");
             });
     }
 
@@ -95,19 +97,18 @@ class TicketPage {
             alert('Ошибка отправки: ' + error.message);
         } finally {
             this.sendMessageButton.disabled = false;
-            this.messageTextarea.focus();
         }
     }
     
     addMessageToBox(messageId, message) {
         if (document.querySelector(`[data-message-id="${messageId}"]`)) return;
-        const author = this.participants.get(message.user_id) || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
+        const author = this.participants.get(message.user_id) || {};
         const wrapper = document.createElement('div');
         wrapper.className = `message-wrapper ${message.user_id === this.user.uid ? 'user' : 'admin'}`;
         wrapper.dataset.messageId = messageId;
-        const date = message.created_at ? new Date(message.created_at.toDate()).toLocaleString('ru-RU') : 'отправка...';
+        const date = new Date(message.created_at.toDate()).toLocaleString('ru-RU');
         const avatarHTML = author.avatar_url ? `<img src="${author.avatar_url}" alt="Аватар">` : `<div class="message-avatar-placeholder">${(author.username || 'U').charAt(0).toUpperCase()}</div>`;
-        wrapper.innerHTML = `<div class="message-header"><div class="message-avatar">${avatarHTML}</div><div class="message-author ${author.role === 'Администратор' ? 'admin-role' : ''}">${author.username}</div></div><div class="message"><p>${message.content}</p><span>${date}</span></div>`;
+        wrapper.innerHTML = `<div class="message-header"><div class="message-avatar">${avatarHTML}</div><div class="message-author ${author.role === 'Администратор' ? 'admin-role' : ''}">${author.username || 'Пользователь'}</div></div><div class="message"><p>${message.content}</p><span>${date}</span></div>`;
         this.chatBox.appendChild(wrapper);
     }
     
