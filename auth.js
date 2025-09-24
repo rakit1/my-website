@@ -7,7 +7,7 @@ class AuthManager {
             projectId: "cbworlds-a8b71",
             storageBucket: "cbworlds-a8b71.appspot.com",
             messagingSenderId: "769755269110",
-            appId: "1:769755269110:web:7716cbaf3a3d3d193369d7",
+            appId: "1:769755269110:web:7716cbaf3a3d3d193d7",
             measurementId: "G-VS3T407KK9"
         };
         firebase.initializeApp(firebaseConfig);
@@ -83,8 +83,7 @@ class AuthManager {
         const provider = new firebase.auth.OAuthProvider('oidc.openid-connect');
         try {
             await this.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-            const result = await this.auth.signInWithPopup(provider);
-            // onAuthStateChanged обработает результат автоматически
+            await this.auth.signInWithPopup(provider);
         } catch (error) {
             console.error("Auth: Ошибка входа через POPUP:", error);
             if (error.code === 'auth/popup-blocked') {
@@ -110,17 +109,16 @@ class AuthManager {
             const name = user.username || 'Пользователь';
             const avatarUrl = user.avatar_url;
             const avatarImg = avatarUrl ? `<img src="${avatarUrl}" alt="Аватар" style='width:100%;height:100%;border-radius:50%;'>` : name.charAt(0).toUpperCase();
-            userSection.innerHTML = `<div class="user-info"><div class="user-dropdown"><div class="user-name"><div class="user-avatar" title="${name}">${avatarImg}</div><span>${name}</span></div><div class="dropdown-menu"><a href="account.html" class="dropdown-item"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88a9.947 9.947 0 0 1 12.28 0C16.43 19.18 14.03 20 12 20z"></path></svg><span>Личный кабинет</span></a><button class.logout-btn dropdown-item"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM12 11H16V13H12V16L8 12L12 8V11Z"></path></svg><span>Выйти</span></button></div></div></div>`;
+            // ИСПРАВЛЕНИЕ БЫЛО ЗДЕСЬ: `class.logout-btn` заменено на `class="logout-btn dropdown-item"`
+            userSection.innerHTML = `<div class="user-info"><div class="user-dropdown"><div class="user-name"><div class="user-avatar" title="${name}">${avatarImg}</div><span>${name}</span></div><div class="dropdown-menu"><a href="account.html" class="dropdown-item"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88a9.947 9.947 0 0 1 12.28 0C16.43 19.18 14.03 20 12 20z"></path></svg><span>Личный кабинет</span></a><button class="logout-btn dropdown-item"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM12 11H16V13H12V16L8 12L12 8V11Z"></path></svg><span>Выйти</span></button></div></div></div>`;
         } else {
             userSection.innerHTML = '<button class="login-btn">Войти</button>';
             const loginBtn = userSection.querySelector('.login-btn');
             if(loginBtn) {
                  loginBtn.addEventListener('click', () => {
-                     // Находим модальное окно и кнопку в нем для signInWithDiscord
                      const authPage = document.querySelector('#authPage');
                      const discordSignInBtn = document.querySelector('#discordSignIn');
                      if(authPage) authPage.classList.add('active');
-                     // Убеждаемся, что на основную кнопку в модалке навешан правильный обработчик
                      if(discordSignInBtn) discordSignInBtn.onclick = () => this.signInWithDiscord();
                  });
             }
