@@ -257,6 +257,12 @@
         .hidden {
             display: none;
         }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -281,7 +287,7 @@
                 </div>
 
                 <div class="conversations-list" id="conversationsList">
-                    <!-- Список диалогов будет здесь -->
+                    <div class="loading">Загрузка диалогов...</div>
                 </div>
 
                 <div class="user-search">
@@ -298,7 +304,7 @@
                 </div>
 
                 <div class="messages-container" id="messagesContainer">
-                    <!-- Сообщения будут здесь -->
+                    <div class="loading">Выберите диалог для начала общения</div>
                 </div>
 
                 <div class="message-input-area">
@@ -310,209 +316,336 @@
     </div>
 
     <script>
-        // Supabase конфигурация
-        const supabaseUrl = 'https://xwryezubbsiptptmrevk.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3cnllenViYnNpcHRwdG1yZXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3MzYwMDEsImV4cCI6MjA3NDMxMjAwMX0.Mg8s-r4eatA4402TXVVHk-DIhE5xT-N21eikjKbFMNE';
-        
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        // Конфигурация Supabase
+        const SUPABASE_URL = 'https://xwryezubbsiptptmrevk.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3cnllenViYnNpcHRwdG1yZXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3MzYwMDEsImV4cCI6MjA3NDMxMjAwMX0.Mg8s-r4eatA4402TXVVHk-DIhE5xT-N21eikjKbFMNE';
 
-        // Элементы DOM
-        const loginPage = document.getElementById('loginPage');
-        const chatContainer = document.getElementById('chatContainer');
-        const discordLogin = document.getElementById('discordLogin');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const userName = document.getElementById('userName');
-        const userAvatar = document.getElementById('userAvatar');
-        const conversationsList = document.getElementById('conversationsList');
-        const userSearch = document.getElementById('userSearch');
-        const searchResults = document.getElementById('searchResults');
-        const chatUserName = document.getElementById('chatUserName');
-        const chatUserAvatar = document.getElementById('chatUserAvatar');
-        const messagesContainer = document.getElementById('messagesContainer');
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
-
+        // Глобальные переменные
+        let supabase;
         let currentUser = null;
         let currentConversation = null;
 
         // Инициализация приложения
+        document.addEventListener('DOMContentLoaded', function() {
+            initApp();
+        });
+
         async function initApp() {
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (session) {
-                await handleUserLogin(session.user);
-            } else {
+            try {
+                // Инициализируем Supabase
+                supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                
+                // Проверяем текущую сессию
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error) {
+                    console.error('Error getting session:', error);
+                    showLoginPage();
+                    return;
+                }
+
+                if (session) {
+                    await handleUserLogin(session.user);
+                } else {
+                    showLoginPage();
+                }
+
+                // Настраиваем обработчики событий
+                setupEventListeners();
+
+                // Слушаем изменения авторизации
+                supabase.auth.onAuthStateChange(async (event, session) => {
+                    console.log('Auth state changed:', event);
+                    if (event === 'SIGNED_IN' && session) {
+                        await handleUserLogin(session.user);
+                    } else if (event === 'SIGNED_OUT') {
+                        showLoginPage();
+                    }
+                });
+
+            } catch (error) {
+                console.error('Initialization error:', error);
                 showLoginPage();
             }
+        }
 
-            // Слушаем изменения авторизации
-            supabase.auth.onAuthStateChange(async (event, session) => {
-                if (event === 'SIGNED_IN' && session) {
-                    await handleUserLogin(session.user);
-                } else if (event === 'SIGNED_OUT') {
-                    showLoginPage();
+        // Настройка обработчиков событий
+        function setupEventListeners() {
+            // Вход через Discord
+            document.getElementById('discordLogin').addEventListener('click', handleDiscordLogin);
+            
+            // Выход
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            
+            // Поиск пользователей
+            document.getElementById('userSearch').addEventListener('input', handleUserSearch);
+            
+            // Отправка сообщений
+            document.getElementById('sendBtn').addEventListener('click', sendMessage);
+            document.getElementById('messageInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
                 }
             });
         }
 
+        // Обработка входа через Discord
+        async function handleDiscordLogin() {
+            try {
+                const { error } = await supabase.auth.signInWithOAuth({
+                    provider: 'discord',
+                    options: {
+                        redirectTo: window.location.origin
+                    }
+                });
+                
+                if (error) {
+                    console.error('Discord login error:', error);
+                    alert('Ошибка входа через Discord: ' + error.message);
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('Ошибка входа: ' + error.message);
+            }
+        }
+
+        // Обработка выхода
+        async function handleLogout() {
+            try {
+                const { error } = await supabase.auth.signOut();
+                if (error) {
+                    console.error('Logout error:', error);
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+
         // Обработка входа пользователя
         async function handleUserLogin(user) {
-            currentUser = user;
-            
-            // Создаем или обновляем профиль пользователя
-            const { data: profile } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', user.id)
-                .single();
+            try {
+                currentUser = user;
+                console.log('User logged in:', user);
+                
+                // Создаем или обновляем профиль пользователя
+                await createOrUpdateUserProfile(user);
+                
+                showChatInterface(user);
+                await loadUserConversations();
+                setupRealtime();
 
-            if (!profile) {
-                // Получаем данные из Discord (упрощенно)
-                const discordData = {
-                    discord_id: user.user_metadata.provider_id,
-                    discord_username: user.user_metadata.full_name || user.email,
-                    discord_avatar: user.user_metadata.avatar_url,
-                    email: user.email
-                };
-
-                await supabase
-                    .from('users')
-                    .insert([{ id: user.id, ...discordData }]);
+            } catch (error) {
+                console.error('Error handling user login:', error);
             }
+        }
 
-            showChatInterface(user);
-            loadUserConversations();
-            setupRealtime();
+        // Создание или обновление профиля пользователя
+        async function createOrUpdateUserProfile(user) {
+            try {
+                const { data: profile, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+
+                if (error && error.code !== 'PGRST116') { // PGRST116 - no rows returned
+                    throw error;
+                }
+
+                if (!profile) {
+                    const discordData = {
+                        discord_id: user.user_metadata?.provider_id || user.id,
+                        discord_username: user.user_metadata?.full_name || user.user_metadata?.user_name || user.email,
+                        discord_avatar: user.user_metadata?.avatar_url,
+                        email: user.email
+                    };
+
+                    const { error: insertError } = await supabase
+                        .from('users')
+                        .insert([{ id: user.id, ...discordData }]);
+
+                    if (insertError) {
+                        throw insertError;
+                    }
+                }
+            } catch (error) {
+                console.error('Error creating/updating user profile:', error);
+            }
         }
 
         // Показать страницу входа
         function showLoginPage() {
-            loginPage.style.display = 'flex';
-            chatContainer.style.display = 'none';
+            document.getElementById('loginPage').style.display = 'flex';
+            document.getElementById('chatContainer').style.display = 'none';
+            currentUser = null;
+            currentConversation = null;
         }
 
         // Показать интерфейс чата
         function showChatInterface(user) {
-            loginPage.style.display = 'none';
-            chatContainer.style.display = 'flex';
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('chatContainer').style.display = 'flex';
             
-            userName.textContent = user.user_metadata.full_name || user.email;
-            userAvatar.src = user.user_metadata.avatar_url || '';
+            document.getElementById('userName').textContent = user.user_metadata?.full_name || user.email;
+            document.getElementById('userAvatar').src = user.user_metadata?.avatar_url || '';
         }
 
         // Загрузка диалогов пользователя
         async function loadUserConversations() {
-            const { data: conversations, error } = await supabase
-                .rpc('get_user_conversations', { user_uuid: currentUser.id });
+            try {
+                const conversationsList = document.getElementById('conversationsList');
+                conversationsList.innerHTML = '<div class="loading">Загрузка диалогов...</div>';
 
-            if (error) {
+                const { data: conversations, error } = await supabase
+                    .rpc('get_user_conversations', { user_uuid: currentUser.id });
+
+                if (error) {
+                    throw error;
+                }
+
+                conversationsList.innerHTML = '';
+                
+                if (conversations.length === 0) {
+                    conversationsList.innerHTML = '<div class="loading">Диалогов пока нет</div>';
+                    return;
+                }
+
+                conversations.forEach(conv => {
+                    const convElement = document.createElement('div');
+                    convElement.className = 'conversation-item';
+                    convElement.innerHTML = `
+                        <img src="${conv.other_user_avatar || ''}" class="user-avatar" alt="Avatar">
+                        <div>
+                            <div>${conv.other_user_username}</div>
+                            <div style="font-size: 0.8em; color: #666;">${conv.last_message ? conv.last_message.substring(0, 30) + '...' : 'Нет сообщений'}</div>
+                        </div>
+                    `;
+                    convElement.onclick = () => selectConversation(conv.conversation_id, conv);
+                    conversationsList.appendChild(convElement);
+                });
+
+            } catch (error) {
                 console.error('Error loading conversations:', error);
-                return;
+                document.getElementById('conversationsList').innerHTML = '<div class="loading">Ошибка загрузки диалогов</div>';
             }
-
-            conversationsList.innerHTML = '';
-            conversations.forEach(conv => {
-                const convElement = document.createElement('div');
-                convElement.className = 'conversation-item';
-                convElement.innerHTML = `
-                    <img src="${conv.other_user_avatar || ''}" class="user-avatar" alt="Avatar">
-                    <div>
-                        <div>${conv.other_user_username}</div>
-                        <div style="font-size: 0.8em; color: #666;">${conv.last_message || 'Нет сообщений'}</div>
-                    </div>
-                `;
-                convElement.onclick = () => selectConversation(conv.conversation_id, conv);
-                conversationsList.appendChild(convElement);
-            });
         }
 
         // Поиск пользователей
-        userSearch.addEventListener('input', async (e) => {
+        async function handleUserSearch(e) {
             const searchTerm = e.target.value.trim();
+            const searchResults = document.getElementById('searchResults');
             
             if (searchTerm.length < 2) {
                 searchResults.classList.add('hidden');
                 return;
             }
 
-            const { data: users, error } = await supabase
-                .from('users')
-                .select('*')
-                .neq('id', currentUser.id)
-                .ilike('discord_username', `%${searchTerm}%`)
-                .limit(10);
+            try {
+                const { data: users, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .neq('id', currentUser.id)
+                    .ilike('discord_username', `%${searchTerm}%`)
+                    .limit(10);
 
-            if (error) {
+                if (error) {
+                    throw error;
+                }
+
+                searchResults.innerHTML = '';
+                
+                if (users.length === 0) {
+                    searchResults.innerHTML = '<div class="search-result-item">Пользователи не найдены</div>';
+                } else {
+                    users.forEach(user => {
+                        const userElement = document.createElement('div');
+                        userElement.className = 'search-result-item';
+                        userElement.innerHTML = `
+                            <img src="${user.discord_avatar || ''}" class="user-avatar" alt="Avatar">
+                            <span>${user.discord_username}</span>
+                        `;
+                        userElement.onclick = () => startConversation(user);
+                        searchResults.appendChild(userElement);
+                    });
+                }
+
+                searchResults.classList.remove('hidden');
+
+            } catch (error) {
                 console.error('Search error:', error);
-                return;
+                searchResults.innerHTML = '<div class="search-result-item">Ошибка поиска</div>';
+                searchResults.classList.remove('hidden');
             }
-
-            searchResults.innerHTML = '';
-            users.forEach(user => {
-                const userElement = document.createElement('div');
-                userElement.className = 'search-result-item';
-                userElement.innerHTML = `
-                    <img src="${user.discord_avatar || ''}" class="user-avatar" alt="Avatar">
-                    <span>${user.discord_username}</span>
-                `;
-                userElement.onclick = () => startConversation(user);
-                searchResults.appendChild(userElement);
-            });
-
-            searchResults.classList.remove('hidden');
-        });
+        }
 
         // Начать новый диалог
         async function startConversation(user) {
-            const { data: conversationId, error } = await supabase
-                .rpc('create_conversation', {
-                    user1_id: currentUser.id,
-                    user2_id: user.id
-                });
+            try {
+                const { data: conversationId, error } = await supabase
+                    .rpc('create_conversation', {
+                        user1_id: currentUser.id,
+                        user2_id: user.id
+                    });
 
-            if (error) {
+                if (error) {
+                    throw error;
+                }
+
+                document.getElementById('userSearch').value = '';
+                document.getElementById('searchResults').classList.add('hidden');
+                await loadUserConversations();
+
+            } catch (error) {
                 console.error('Error creating conversation:', error);
-                return;
+                alert('Ошибка создания диалога: ' + error.message);
             }
-
-            userSearch.value = '';
-            searchResults.classList.add('hidden');
-            loadUserConversations();
         }
 
         // Выбрать диалог
         async function selectConversation(conversationId, conversationData) {
-            currentConversation = conversationId;
-            
-            // Обновляем заголовок чата
-            chatUserName.textContent = conversationData.other_user_username;
-            chatUserAvatar.src = conversationData.other_user_avatar || '';
+            try {
+                currentConversation = conversationId;
+                
+                // Обновляем заголовок чата
+                document.getElementById('chatUserName').textContent = conversationData.other_user_username;
+                document.getElementById('chatUserAvatar').src = conversationData.other_user_avatar || '';
 
-            // Активируем поле ввода
-            messageInput.disabled = false;
-            sendBtn.disabled = false;
+                // Активируем поле ввода
+                document.getElementById('messageInput').disabled = false;
+                document.getElementById('sendBtn').disabled = false;
 
-            // Загружаем сообщения
-            const { data: messages, error } = await supabase
-                .from('messages')
-                .select(`
-                    *,
-                    user:users(discord_username, discord_avatar)
-                `)
-                .eq('conversation_id', conversationId)
-                .order('created_at', { ascending: true });
+                // Загружаем сообщения
+                const { data: messages, error } = await supabase
+                    .from('messages')
+                    .select(`
+                        *,
+                        user:users(discord_username, discord_avatar)
+                    `)
+                    .eq('conversation_id', conversationId)
+                    .order('created_at', { ascending: true });
 
-            if (error) {
-                console.error('Error loading messages:', error);
-                return;
+                if (error) {
+                    throw error;
+                }
+
+                displayMessages(messages);
+
+            } catch (error) {
+                console.error('Error selecting conversation:', error);
             }
-
-            displayMessages(messages);
         }
 
         // Отображение сообщений
         function displayMessages(messages) {
+            const messagesContainer = document.getElementById('messagesContainer');
             messagesContainer.innerHTML = '';
+            
+            if (messages.length === 0) {
+                messagesContainer.innerHTML = '<div class="loading">Нет сообщений</div>';
+                return;
+            }
+
             messages.forEach(message => {
                 const messageElement = document.createElement('div');
                 messageElement.className = `message ${message.user_id === currentUser.id ? 'own' : ''}`;
@@ -527,37 +660,35 @@
         }
 
         // Отправка сообщения
-        sendBtn.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
         async function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
             const content = messageInput.value.trim();
+            
             if (!content || !currentConversation) return;
 
-            const { error } = await supabase
-                .from('messages')
-                .insert([{
-                    conversation_id: currentConversation,
-                    user_id: currentUser.id,
-                    content: content
-                }]);
+            try {
+                const { error } = await supabase
+                    .from('messages')
+                    .insert([{
+                        conversation_id: currentConversation,
+                        user_id: currentUser.id,
+                        content: content
+                    }]);
 
-            if (error) {
+                if (error) {
+                    throw error;
+                }
+
+                messageInput.value = '';
+
+            } catch (error) {
                 console.error('Error sending message:', error);
-                return;
+                alert('Ошибка отправки сообщения: ' + error.message);
             }
-
-            messageInput.value = '';
         }
 
         // Настройка realtime подписки
         function setupRealtime() {
-            // Слушаем новые сообщения
             supabase
                 .channel('messages')
                 .on('postgres_changes', 
@@ -568,41 +699,38 @@
                     },
                     (payload) => {
                         if (currentConversation === payload.new.conversation_id) {
-                            // Добавляем новое сообщение в чат
-                            const messageElement = document.createElement('div');
-                            messageElement.className = `message ${payload.new.user_id === currentUser.id ? 'own' : ''}`;
-                            messageElement.innerHTML = `
-                                ${payload.new.user_id !== currentUser.id ? 
-                                    `<div class="message-sender">Загрузка...</div>` : ''}
-                                <div class="message-content">${payload.new.content}</div>
-                            `;
-                            messagesContainer.appendChild(messageElement);
-                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            // Обновляем сообщения
+                            loadConversationMessages();
                         }
                     }
                 )
                 .subscribe();
         }
 
-        // Вход через Discord
-        discordLogin.addEventListener('click', async () => {
-            const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'discord',
-                options: {
-                    redirectTo: window.location.origin
+        // Загрузка сообщений диалога
+        async function loadConversationMessages() {
+            if (!currentConversation) return;
+
+            try {
+                const { data: messages, error } = await supabase
+                    .from('messages')
+                    .select(`
+                        *,
+                        user:users(discord_username, discord_avatar)
+                    `)
+                    .eq('conversation_id', currentConversation)
+                    .order('created_at', { ascending: true });
+
+                if (error) {
+                    throw error;
                 }
-            });
-            
-            if (error) console.error('Login error:', error);
-        });
 
-        // Выход
-        logoutBtn.addEventListener('click', async () => {
-            await supabase.auth.signOut();
-        });
+                displayMessages(messages);
 
-        // Запуск приложения
-        initApp();
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
     </script>
 </body>
 </html>
