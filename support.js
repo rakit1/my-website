@@ -47,31 +47,59 @@ class SupportPage {
         this.promptLoginBtn.addEventListener('click', () => this.authManager.signInWithDiscord());
     }
 
+    // ИЗМЕНЕНО: Логика создания тикета теперь использует транзакцию и счетчик
     async handleSubmit(event) {
         event.preventDefault();
         const description = this.form.elements.description.value.trim();
         if (!description) return this.showFeedback('Описание не может быть пустым.', 'error');
+        
         const submitButton = this.form.querySelector('button[type="submit"]');
         submitButton.disabled = true;
-        submitButton.textContent = 'Отправка...';
+        submitButton.textContent = 'Создание...';
+
+        const counterRef = this.db.collection('counters').doc('tickets');
+        const newTicketRef = this.db.collection('tickets').doc(); // Firestore все еще генерирует уникальный ID
+
         try {
-            const newTicketRef = await this.db.collection('tickets').add({
-                user_id: this.user.uid,
-                description,
-                is_closed: false,
-                created_at: firebase.firestore.FieldValue.serverTimestamp()
+            // Запускаем транзакцию, чтобы безопасно получить новый номер
+            const newTicketNumber = await this.db.runTransaction(async (transaction) => {
+                const counterDoc = await transaction.get(counterRef);
+                if (!counterDoc.exists) {
+                    throw "Документ-счетчик не найден!";
+                }
+                const newNumber = counterDoc.data().current_number + 1;
+                
+                // 1. Обновляем счетчик
+                transaction.update(counterRef, { current_number: newNumber });
+                
+                // 2. Создаем новый тикет
+                const ticketData = {
+                    user_id: this.user.uid,
+                    description,
+                    is_closed: false,
+                    created_at: firebase.firestore.FieldValue.serverTimestamp(),
+                    ticket_number: newNumber // Добавляем наш номер
+                };
+                transaction.set(newTicketRef, ticketData);
+                
+                return newNumber;
             });
+
+            // 3. Создаем первое сообщение для этого тикета
             await this.db.collection('messages').add({
                 ticket_id: newTicketRef.id,
                 user_id: this.user.uid,
                 content: description,
                 created_at: firebase.firestore.FieldValue.serverTimestamp()
             });
+
             document.body.classList.add('fade-out');
             setTimeout(() => window.location.href = `ticket.html?id=${newTicketRef.id}`, 250);
+
         } catch (error) {
             this.showFeedback(`Ошибка: ${error.message}`, 'error');
             submitButton.disabled = false;
+            submitButton.textContent = 'Отправить обращение';
         }
     }
     
