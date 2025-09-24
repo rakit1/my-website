@@ -11,14 +11,9 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 </head>
 <body>
-
 <header>
   <div class="logo">
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
-        <rect x="1" y="1" width="22" height="22" rx="6" fill="#111"/>
-        <circle cx="8.5" cy="10.5" r="3.3" fill="#635bff"/>
-        <circle cx="15.5" cy="13.7" r="2.2" fill="#f6f7fb" opacity="0.06"/>
-    </svg>
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="1" y="1" width="22" height="22" rx="6" fill="#111"/><circle cx="8.5" cy="10.5" r="3.3" fill="#635bff"/><circle cx="15.5" cy="13.7" r="2.2" fill="#f6f7fb" opacity="0.06"/></svg>
     CBWORLDS
   </div>
   <nav>
@@ -26,15 +21,9 @@
     <a href="#">Как играть</a>
     <a href="support.html">Поддержка</a>
   </nav>
-  <div id="userSection">
-    </div>
-  <button class="mobile-menu-btn" aria-label="Открыть меню">
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
+  <div id="userSection"></div>
+  <button class="mobile-menu-btn" aria-label="Открыть меню"><span></span><span></span><span></span></button>
 </header>
-
 <main>
   <div class="wrap">
     <div class="account-container">
@@ -43,23 +32,21 @@
         <div class="skeleton-text" style="width: 150px;"></div>
         <div class="skeleton-text" style="width: 200px; height: 16px;"></div>
       </div>
-      
       <div id="admin-panel-section" class="admin-panel-section"></div>
-
       <div class="tickets-section">
         <h2 class="section-title">Мои обращения в поддержку</h2>
         <div id="tickets-list" class="tickets-list">
           <div class="skeleton-ticket"></div>
-           <div class="skeleton-ticket"></div>
+          <div class="skeleton-ticket"></div>
         </div>
       </div>
     </div>
   </div>
 </main>
 
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 <script src="auth.js"></script>
 <script src="account.js"></script>
