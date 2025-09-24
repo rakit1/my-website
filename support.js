@@ -1,10 +1,10 @@
 class SupportPage {
     constructor(authManager) {
         this.authManager = authManager;
+        this.db = authManager.db;
         this.user = null;
         this.form = document.getElementById('ticket-form');
         this.feedbackDiv = document.getElementById('form-feedback');
-        
         this.supportContent = document.getElementById('support-content');
         this.ticketExistsWarning = document.getElementById('ticket-exists-warning');
         this.loginPromptModal = document.getElementById('login-prompt');
@@ -13,15 +13,15 @@ class SupportPage {
         this.init();
     }
 
-    async init() {
-        const { data: { user } } = await this.authManager.supabase.auth.getUser();
-        
-        if (user) {
-            this.user = user;
-            this.setupAuthenticatedView();
-        } else {
-            this.setupGuestView();
-        }
+    init() {
+        this.authManager.auth.onAuthStateChanged(user => {
+            if (user) {
+                this.user = user;
+                this.setupAuthenticatedView();
+            } else {
+                this.setupGuestView();
+            }
+        });
 
         if (this.form) {
             this.form.addEventListener('submit', (e) => this.handleSubmit(e));
@@ -32,21 +32,14 @@ class SupportPage {
         this.loginPromptModal.classList.remove('active');
 
         try {
-            // Проверяем, есть ли у пользователя уже открытый тикет
-            const { data, error, count } = await this.authManager.supabase
-                .from('tickets')
-                .select('id', { count: 'exact', head: true })
-                .eq('user_id', this.user.id)
-                .eq('is_closed', false);
+            const ticketsRef = firebase.firestore().collection('tickets');
+            const query = ticketsRef.where('user_id', '==', this.user.uid).where('is_closed', '==', false).limit(1);
+            const snapshot = await query.get();
 
-            if (error) throw error;
-            
-            // Если есть открытый тикет (count > 0), показываем предупреждение
-            if (count > 0) {
+            if (!snapshot.empty) {
                 this.supportContent.style.display = 'none';
                 this.ticketExistsWarning.style.display = 'block';
             } else {
-                // Если нет, показываем форму для создания
                 this.supportContent.style.display = 'block';
                 this.ticketExistsWarning.style.display = 'none';
             }
@@ -77,32 +70,23 @@ class SupportPage {
         submitButton.textContent = 'Отправка...';
         
         try {
-            const { data: ticketData, error: ticketError } = await this.authManager.supabase
-                .from('tickets')
-                .insert([{ description: description, user_id: this.user.id }])
-                .select()
-                .single();
+            const newTicketRef = await firebase.firestore().collection('tickets').add({
+                user_id: this.user.uid,
+                description: description,
+                is_closed: false,
+                created_at: firebase.firestore.FieldValue.serverTimestamp()
+            });
 
-            if (ticketError) throw ticketError;
-            
-            const newTicketId = ticketData.id;
-
-            // --- ИЗМЕНЕНИЕ ЗДЕСЬ ---
-            // Мы удалили строку 'ticket_owner_id', которой больше нет в базе данных
-            const { error: messageError } = await this.authManager.supabase
-                .from('messages')
-                .insert([{ 
-                    ticket_id: newTicketId, 
-                    user_id: this.user.id, 
-                    content: description
-                }]);
-            // --- КОНЕЦ ИЗМЕНЕНИЯ ---
-                
-            if (messageError) throw messageError;
+            await firebase.firestore().collection('messages').add({
+                ticket_id: newTicketRef.id,
+                user_id: this.user.uid,
+                content: description,
+                created_at: firebase.firestore.FieldValue.serverTimestamp()
+            });
 
             document.body.classList.add('fade-out');
             setTimeout(() => {
-                window.location.href = `ticket.html?id=${newTicketId}`;
+                window.location.href = `ticket.html?id=${newTicketRef.id}`;
             }, 250);
 
         } catch (error) {
@@ -115,7 +99,7 @@ class SupportPage {
     showFeedback(message, type) {
         this.feedbackDiv.textContent = message;
         this.feedbackDiv.className = `form-feedback ${type} visible`;
-        this.supportContent.style.display = 'block'; // Убедимся, что форма видна для отображения ошибки
+        this.supportContent.style.display = 'block';
         setTimeout(() => { this.feedbackDiv.classList.remove('visible'); }, 5000);
     }
 }
@@ -124,3 +108,4 @@ document.addEventListener('DOMContentLoaded', () => {
     const authManager = new AuthManager();
     new SupportPage(authManager);
 });
+
