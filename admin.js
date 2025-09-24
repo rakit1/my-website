@@ -26,7 +26,8 @@ class AdminPage {
     async fetchAllTickets() {
         if (!this.ticketsListContainer) return;
         try {
-            const snapshot = await this.db.collection('tickets').orderBy('created_at', 'desc').get();
+            // Сортируем по новому номеру, а не по дате
+            const snapshot = await this.db.collection('tickets').orderBy('ticket_number', 'desc').get();
             if (!snapshot.empty) {
                 const authorIds = [...new Set(snapshot.docs.map(doc => doc.data().user_id))];
                 const profiles = new Map();
@@ -37,10 +38,11 @@ class AdminPage {
                 this.ticketsListContainer.innerHTML = snapshot.docs.map(doc => {
                     const ticket = doc.data();
                     const author = profiles.get(ticket.user_id) || { username: 'Неизвестный' };
-                    // ИСПРАВЛЕНИЕ: Добавлена проверка на существование даты
                     const date = ticket.created_at ? new Date(ticket.created_at.toDate()).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'}) : '...';
                     const status = ticket.is_closed ? '<span class="ticket-status closed">Закрыт</span>' : '<span class="open-ticket-btn">Ответить</span>';
-                    return `<a href="ticket.html?id=${doc.id}" class="ticket-card-link"><div class="ticket-card"><div><span class="ticket-id">Тикет #${doc.id}</span><div class="ticket-author">От: ${author.username}</div><p class="ticket-description">${ticket.description}</p></div><div class="ticket-footer"><span class="ticket-date">Создано: ${date}</span>${status}</div></div></a>`;
+                     // ИЗМЕНЕНО: Отображаем ticket_number вместо doc.id
+                    const ticketDisplayId = ticket.ticket_number ? `#${ticket.ticket_number}` : `#${doc.id.substring(0,6)}`;
+                    return `<a href="ticket.html?id=${doc.id}" class="ticket-card-link"><div class="ticket-card"><div><span class="ticket-id">Тикет ${ticketDisplayId}</span><div class="ticket-author">От: ${author.username}</div><p class="ticket-description">${ticket.description}</p></div><div class="ticket-footer"><span class="ticket-date">Создано: ${date}</span>${status}</div></div></a>`;
                 }).join('');
             } else {
                 this.ticketsListContainer.innerHTML = '<p class="no-tickets-message">Активных обращений нет.</p>';
