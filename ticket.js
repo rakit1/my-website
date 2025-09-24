@@ -8,6 +8,7 @@ class TicketPage {
         this.isTicketClosed = false;
         this.channel = null;
 
+        // Здесь мы будем хранить загруженные профили участников: { 'user_id': { username: '...', avatar_url: '...' } }
         this.participants = new Map();
         this.chatBox = document.getElementById('chat-box');
         this.messageForm = document.getElementById('message-form');
@@ -40,51 +41,57 @@ class TicketPage {
 
     async loadInitialData() {
         try {
-            const { data: profile } = await this.supabase
-                .from('profiles')
-                .select('role, username, avatar_url')
-                .eq('id', this.user.id)
-                .single();
-            if (profile) {
-                this.isCurrentUserAdmin = profile.role === 'Администратор';
-                this.participants.set(this.user.id, profile);
-            }
-
             const { data: ticketData, error: ticketError } = await this.supabase
                 .from('tickets')
                 .select('user_id, is_closed')
                 .eq('id', this.ticketId)
                 .single();
 
-            if (ticketError || (!this.isCurrentUserAdmin && ticketData.user_id !== this.user.id)) {
-                throw new Error("Не удалось найти тикет или у вас нет к нему доступа.");
+            if (ticketError) throw new Error("Не удалось найти тикет или у вас нет к нему доступа.");
+
+            // --- НОВЫЙ, НАДЕЖНЫЙ МЕТОД ЗАГРУЗКИ ДАННЫХ ---
+
+            // Шаг 1: Сначала получаем ТОЛЬКО сообщения, без всяких связей. Этот запрос не может сломаться.
+            const { data: messages, error: messagesError } = await this.supabase
+                .from('messages')
+                .select('*')
+                .eq('ticket_id', this.ticketId)
+                .order('created_at');
+
+            if (messagesError) throw messagesError;
+
+            // Шаг 2: Собираем ID всех уникальных авторов из сообщений.
+            const authorIds = [...new Set(messages.map(msg => msg.user_id))];
+            // Добавляем ID текущего пользователя, чтобы его профиль тоже загрузился.
+            if (!authorIds.includes(this.user.id)) {
+                authorIds.push(this.user.id);
+            }
+
+            // Шаг 3: Одним запросом получаем все нужные профили.
+            if (authorIds.length > 0) {
+                const { data: profiles, error: profilesError } = await this.supabase
+                    .from('profiles')
+                    .select('id, username, avatar_url, role')
+                    .in('id', authorIds);
+
+                if (profilesError) throw profilesError;
+
+                // Заполняем нашу карту участников для быстрого доступа к данным профиля.
+                profiles.forEach(p => this.participants.set(p.id, p));
+            }
+            
+            // --- КОНЕЦ НОВОГО МЕТОДА ---
+
+            const currentUserProfile = this.participants.get(this.user.id);
+            this.isCurrentUserAdmin = currentUserProfile?.role === 'Администратор';
+
+            if (!this.isCurrentUserAdmin && ticketData.user_id !== this.user.id) {
+                throw new Error("У вас нет доступа к этому тикету.");
             }
 
             this.isTicketClosed = ticketData.is_closed;
             this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
             this.updateTicketUI();
-            
-            // Этот код теперь будет работать, так как связь в БД есть
-            const { data: messages, error: messagesError } = await this.supabase
-                .from('messages')
-                .select(`
-                    *,
-                    profiles (
-                        username,
-                        avatar_url,
-                        role
-                    )
-                `)
-                .eq('ticket_id', this.ticketId)
-                .order('created_at');
-
-            if (messagesError) throw messagesError;
-            
-            messages.forEach(msg => {
-                if (msg.profiles && !this.participants.has(msg.user_id)) {
-                    this.participants.set(msg.user_id, msg.profiles);
-                }
-            });
 
             this.chatBox.innerHTML = '';
             messages.forEach(msg => this.addMessageToBox(msg));
@@ -98,7 +105,8 @@ class TicketPage {
     addMessageToBox(message) {
         if (document.querySelector(`[data-message-id="${message.id}"]`)) return;
         
-        const authorProfile = this.participants.get(message.user_id) || message.profiles || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
+        // Теперь мы просто берем профиль из уже загруженных данных.
+        const authorProfile = this.participants.get(message.user_id) || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
         const isUserMessage = message.user_id === this.user.id;
         const isAdmin = authorProfile.role === 'Администратор';
 
@@ -177,14 +185,13 @@ class TicketPage {
                 filter: `ticket_id=eq.${this.ticketId}` 
             }, async (payload) => {
                 const newMessage = payload.new;
+                // Если профиля нового автора еще нет, догружаем его.
                 if (!this.participants.has(newMessage.user_id)) {
                     const { data: profile } = await this.supabase.from('profiles').select('username, avatar_url, role').eq('id', newMessage.user_id).single();
                     if (profile) this.participants.set(newMessage.user_id, profile);
                 }
                 
-                const finalMessage = { ...newMessage, profiles: this.participants.get(newMessage.user_id) };
-                this.addMessageToBox(finalMessage);
-
+                this.addMessageToBox(newMessage);
                 this.scrollToBottom();
             })
             .on('postgres_changes', {
