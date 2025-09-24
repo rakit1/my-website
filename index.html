@@ -131,7 +131,6 @@
                 data.forEach(user => {
                     const userDiv = document.createElement('div');
                     userDiv.className = 'user-item';
-                    userDiv.dataset.userId = user.id;
                     userDiv.innerHTML = `<img src="${user.avatar_url}" class="user-item-avatar"><p>${user.username}</p>`;
                     userDiv.addEventListener('click', () => handleUserClick(user.id, user.username, userDiv));
                     userList.appendChild(userDiv);
@@ -142,10 +141,15 @@
                 document.querySelectorAll('.user-item.active').forEach(el => el.classList.remove('active'));
                 element.classList.add('active');
 
-                const { data, error } = await findOrCreateConversation(userId);
-                if (error) { console.error("Не удалось начать диалог:", error); return; }
+                // --- ИЗМЕНЕНИЕ: ВЫЗЫВАЕМ НОВУЮ, БЕЗОПАСНУЮ ФУНКЦИЮ ---
+                const { data, error } = await supabase.rpc('create_or_get_conversation', { other_user_id: userId });
+
+                if (error || !data || data.length === 0) { 
+                    console.error("Не удалось начать диалог:", error); 
+                    return; 
+                }
                 
-                activeConversationId = data.id;
+                activeConversationId = data[0].id;
                 loadConversation(username);
             };
 
@@ -178,7 +182,7 @@
                         filter: `conversation_id=eq.${conversationId}`
                     }, async (payload) => {
                         const newMessage = payload.new;
-                        if (newMessage.author_id === currentUser.id) return; // Не дублируем свои сообщения
+                        if (newMessage.author_id === currentUser.id) return;
 
                         const { data: profile } = await supabase.from('profiles').select('username').eq('id', newMessage.author_id).single();
                         newMessage.author = profile;
@@ -213,28 +217,11 @@
                 if (error) {
                     console.error("Ошибка отправки:", error);
                 } else {
-                    addMessageToBox(data); // Сразу добавляем свое сообщение
+                    addMessageToBox(data);
                     scrollToBottom();
                     input.value = '';
                 }
             });
-
-            const findOrCreateConversation = async (otherUserId) => {
-                const { data: existing, error } = await supabase.rpc('find_conversation_by_users', { user1_id: currentUser.id, user2_id: otherUserId });
-                if (error) return { error };
-                if (existing.length > 0) return { data: existing[0] };
-                
-                const { data: newConv, error: newConvError } = await supabase.from('conversations').insert({}).select().single();
-                if (newConvError) return { error: newConvError };
-
-                const { error: participantsError } = await supabase.from('conversation_participants').insert([
-                    { conversation_id: newConv.id, user_id: currentUser.id },
-                    { conversation_id: newConv.id, user_id: otherUserId }
-                ]);
-                if (participantsError) return { error: participantsError };
-
-                return { data: newConv };
-            };
             
             const scrollToBottom = () => { chatBox.scrollTop = chatBox.scrollHeight; };
             const escapeHTML = (str) => {
