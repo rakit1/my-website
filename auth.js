@@ -1,162 +1,89 @@
 class AuthManager {
     constructor() {
-        const firebaseConfig = {
-            apiKey: "AIzaSyDKPa0Q3kF5aR-N-u25GA2SpQ5MWBXnii4",
-            authDomain: "cbworlds-a8b71.firebaseapp.com",
-            projectId: "cbworlds-a8b71",
-            storageBucket: "cbworlds-a8b71.appspot.com",
-            messagingSenderId: "769755269110",
-            appId: "1:769755269110:web:7716cbaf3a3d3d193369d7",
-            measurementId: "G-VS3T407KK9"
+        this.SUPABASE_URL = "https://skhfhtlgwuegmfsmwvpc.supabase.co";
+        this.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNraGZodGxnd3VlZ21mc213dnBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2Njg4OTQsImV4cCI6MjA3NDI0NDg5NH0.A9tuMEM7a7K88ypThbmOIjbU0RazTxS-gTuI6-nQf7Y";
+
+        // --- КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ ЗДЕСЬ ---
+        // Мы добавляем специальные 'headers', чтобы разрешить вызов Edge Functions.
+        // Это должно исправить проблему с доступом.
+        const options = {
+            auth: {
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: true
+            },
+            global: {
+                headers: { 'x-functions-authorization': 'true' } 
+            }
         };
         
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
+        this.supabase = window.supabase.createClient(this.SUPABASE_URL, this.SUPABASE_ANON_KEY, options);
+        // --- КОНЕЦ ИЗМЕНЕНИЯ ---
 
-        this.auth = firebase.auth();
-        this.db = firebase.firestore();
-        this.user = null;
-        // Устанавливаем язык для Firebase Auth на основе языка браузера
-        // Это может помочь в локализации сообщений об ошибках или экранов аутентификации
-        this.auth.languageCode = navigator.language.split('-')[0];
-        this.init();
-    }
 
-    async init() {
-        this.updateUserUI(null, true); // Показываем "Проверка..."
+        this.supabase.auth.getSession().then(({ data: { session } }) => {
+            this.updateUserUI(session?.user);
+        });
         
-        try {
-            // getRedirectResult() нужно вызывать при каждой загрузке страницы,
-            // чтобы поймать результат после редиректа.
-            const result = await this.auth.getRedirectResult();
-            if (result && result.user) {
-                // Если есть результат редиректа и пользователь,
-                // значит, пользователь только что успешно вошел через Discord.
-                console.log("Пользователь успешно вошел через Discord (редирект).", result.user);
-                // discordProfile будет доступен через additionalUserInfo.profile
-                // для OIDC провайдеров.
-                await this.createUserProfileIfNotExists(result.user, result.additionalUserInfo.profile);
-            }
-            // Затем начинаем слушать изменения состояния аутентификации
-            this.listenForAuthStateChanges();
-        } catch (error) {
-            console.error('Критическая ошибка при обработке редиректа авторизации:', error);
-            // Если произошла ошибка при обработке редиректа (например, пользователь отменил)
-            // или общая ошибка инициализации, показываем UI как для неавторизованного.
-            this.updateUserUI(null);
-            this.listenForAuthStateChanges(); // Все равно начинаем слушать изменения состояния
-        }
+        this.supabase.auth.onAuthStateChange((event, session) => {
+            this.updateUserUI(session?.user);
+        });
 
         document.addEventListener('click', (event) => {
             if (event.target.closest('.logout-btn')) {
-                event.preventDefault(); // Предотвращаем дефолтное поведение ссылки, если это <a>
                 this.signOut();
             }
         });
     }
 
-    listenForAuthStateChanges() {
-        this.auth.onAuthStateChanged(async (firebaseUser) => {
-            if (firebaseUser) {
-                const userProfile = await this.getUserProfile(firebaseUser.uid);
-                // Важно: если профиль не найден, это может быть первый вход.
-                // Возможно, стоит позволить продолжить, если профиль создается сразу после входа.
-                // Твоя текущая логика требует профиля в Firestore для продолжения.
-                if (!userProfile) {
-                    console.error("Профиль пользователя не найден в Firestore. Выход.");
-                    this.signOut();
-                    return;
-                }
-                this.user = { uid: firebaseUser.uid, ...userProfile }; // Сохраняем UID в объекте пользователя
-            } else {
-                this.user = null;
+    async signInWithDiscord() {
+        await this.supabase.auth.signInWithOAuth({
+            provider: 'discord',
+            options: { 
+                redirectTo: window.location.origin,
+                scopes: 'identify email'
             }
-            this.updateUserUI(this.user);
-            document.dispatchEvent(new CustomEvent('userStateReady', { detail: this.user }));
         });
     }
 
-    async createUserProfileIfNotExists(firebaseUser, discordProfile) {
-        const userProfileRef = this.db.collection('profiles').doc(firebaseUser.uid);
-        const doc = await userProfileRef.get();
-        if (!doc.exists) {
-            console.log("Создаем новый профиль пользователя в Firestore.");
-            const newProfileData = {
-                // Discord profile содержит больше деталей, чем firebaseUser напрямую
-                username: discordProfile.username || firebaseUser.displayName,
-                email: discordProfile.email || firebaseUser.email,
-                // Для аватара Discord часто использует id и avatar hash
-                avatar_url: discordProfile.avatar ? `https://cdn.discordapp.com/avatars/${discordProfile.id}/${discordProfile.avatar}.png` : firebaseUser.photoURL,
-                role: 'Игрок',
-                created_at: firebase.firestore.FieldValue.serverTimestamp() // Добавляем метку времени создания
-            };
-            await userProfileRef.set(newProfileData);
-        } else {
-            console.log("Профиль пользователя уже существует.");
-        }
+    async signOut() {
+        document.body.classList.add('fade-out');
+        setTimeout(async () => {
+            await this.supabase.auth.signOut();
+            window.location.href = '/'; 
+        }, 250);
     }
 
-    async getUserProfile(uid) {
-        const doc = await this.db.collection('profiles').doc(uid).get();
-        return doc.exists ? doc.data() : null; // Возвращаем только данные, UID уже есть
-    }
-
-    signInWithDiscord() {
-        // ИСПРАВЛЕНИЕ ЗДЕСЬ: Используй 'oidc.openid-connect' как providerId
-        // Это ID провайдера, который ты настроил в консоли Firebase.
-        const provider = new firebase.auth.OAuthProvider('oidc.openid-connect');
-        provider.addScope('identify');
-        provider.addScope('email');
-        // Если ты хочешь запросить другие данные (например, Guilds для Discord),
-        // тебе нужно добавить соответствующие скоупы здесь,
-        // а также настроить их в Discord Developer Portal.
-
-        this.auth.signInWithRedirect(provider);
-    }
-
-    signOut() {
-        this.auth.signOut();
-    }
-
-    updateUserUI(user, isLoading = false) {
+    updateUserUI(user) {
         const userSection = document.getElementById('userSection');
         if (!userSection) return;
 
-        if (isLoading) {
-            userSection.innerHTML = `<div class="login-btn loading-auth">Проверка...</div>`;
-            return;
-        }
-
         if (user) {
-            const name = user.username || 'Пользователь';
-            const avatarUrl = user.avatar_url;
-            // Убедимся, что аватар отображается корректно, даже если нет URL
-            const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" alt="Аватар" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;background-color:#ccc;">${name.charAt(0).toUpperCase()}</span>`;
-
+            const name = user.user_metadata?.full_name || user.email || 'Пользователь';
+            const avatarUrl = user.user_metadata?.avatar_url;
             userSection.innerHTML = `
                 <div class="user-info">
                     <div class="user-dropdown">
                         <div class="user-name">
-                            <div class="user-avatar" title="${name}">${avatarHtml}</div>
+                            <div class="user-avatar" title="${name}">
+                                ${avatarUrl ? `<img src="${avatarUrl}" alt="Аватар" style="width:100%;height:100%;border-radius:50%;">` : name.charAt(0).toUpperCase()}
+                            </div>
                             <span>${name}</span>
                         </div>
                         <div class="dropdown-menu">
-                            <a href="account.html" class="dropdown-item"><span>Личный кабинет</span></a>
-                            <button class="logout-btn dropdown-item"><span>Выйти</span></button>
+                            <a href="account.html" class="dropdown-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88a9.947 9.947 0 0 1 12.28 0C16.43 19.18 14.03 20 12 20z"></path></svg>
+                                <span>Личный кабинет</span>
+                            </a>
+                            <button class="logout-btn dropdown-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM12 11H16V13H12V16L8 12L12 8V11Z"></path></svg>
+                                <span>Выйти</span>
+                            </button>
                         </div>
                     </div>
                 </div>`;
         } else {
             userSection.innerHTML = '<button class="login-btn">Войти</button>';
-            // Добавляем слушатель события только один раз при создании кнопки
-            const loginButton = userSection.querySelector('.login-btn');
-            if (loginButton) {
-                loginButton.addEventListener('click', () => this.signInWithDiscord());
-            }
         }
     }
 }
-
-// Создаем глобальный экземпляр, к которому будут обращаться все остальные скрипты
-window.authManager = new AuthManager();

@@ -11,9 +11,14 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 </head>
 <body>
+
 <header>
   <div class="logo">
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="1" y="1" width="22" height="22" rx="6" fill="#111"/><circle cx="8.5" cy="10.5" r="3.3" fill="#635bff"/><circle cx="15.5" cy="13.7" r="2.2" fill="#f6f7fb" opacity="0.06"/></svg>
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+        <rect x="1" y="1" width="22" height="22" rx="6" fill="#111"/>
+        <circle cx="8.5" cy="10.5" r="3.3" fill="#635bff"/>
+        <circle cx="15.5" cy="13.7" r="2.2" fill="#f6f7fb" opacity="0.06"/>
+    </svg>
     CBWorlds
   </div>
   <nav>
@@ -22,13 +27,17 @@
     <a href="support.html">Поддержка</a>
   </nav>
   <div id="userSection"></div>
-  <button class="mobile-menu-btn" aria-label="Открыть меню"><span></span><span></span><span></span></button>
+  <button class="mobile-menu-btn" aria-label="Открыть меню">
+    <span></span><span></span><span></span>
+  </button>
 </header>
+
 <main>
   <div class="wrap" id="admin-container" style="display: none;">
     <div class="account-container">
       <div class="tickets-section">
         <div class="admin-header">
+            
             <a href="account.html" class="btn-back">&larr; Назад</a>
             <h1 class="section-title">Все обращения в поддержку</h1>
         </div>
@@ -42,10 +51,7 @@
   </div>
 </main>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script src="admin.js"></script> 
 <script src="transition.js"></script>
