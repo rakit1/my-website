@@ -48,14 +48,11 @@ class MainPage {
 
     setupEventListeners() {
         document.body.addEventListener('click', (e) => {
-            // Обработчики, специфичные для главной страницы
             if (e.target.closest('.login-btn')) this.showModal('#authPage');
             if (e.target.closest('#discordSignIn')) this.authManager.signInWithDiscord();
             if (e.target.closest('.server-join-btn')) this.handleServerJoin();
             if (e.target.closest('.ip-btn')) this.copyIP(e.target.closest('.ip-btn'));
-            if (e.target.closest('.logout-btn')) this.authManager.signOut();
 
-            // --- Логика закрытия модальных окон ---
             if (e.target.closest('.close-auth, .close-ip-modal')) {
                 const modal = e.target.closest('.auth-container, .ip-modal');
                 if (modal) {
@@ -93,10 +90,12 @@ class MainPage {
         });
     }
     
-    async handleServerJoin() {
-        const { data: { user } } = await this.authManager.supabase.auth.getUser();
-        if (user) this.showModal('#ipModal');
-        else this.showModal('#authPage');
+    handleServerJoin() {
+        if (this.authManager.auth.currentUser) {
+            this.showModal('#ipModal');
+        } else {
+            this.showModal('#authPage');
+        }
     }
     
     showModal(selector) {
@@ -113,7 +112,17 @@ class MainPage {
         }
     }
 
-    async copyIP(button) { const ip = button.dataset.ip; if (!ip) return; try { await navigator.clipboard.writeText(ip); button.classList.add('copied'); setTimeout(() => button.classList.remove('copied'), 1500); } catch (err) { alert('Не удалось скопировать IP. Скопируйте вручную: ' + ip); } }
+    async copyIP(button) {
+        const ip = button.dataset.ip;
+        if (!ip) return;
+        try {
+            await navigator.clipboard.writeText(ip);
+            button.classList.add('copied');
+            setTimeout(() => button.classList.remove('copied'), 1500);
+        } catch (err) {
+            alert('Не удалось скопировать IP. Скопируйте вручную: ' + ip);
+        }
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -124,3 +133,4 @@ document.addEventListener('DOMContentLoaded', () => {
 window.scrollToServers = function() {
     document.getElementById('servers-section')?.scrollIntoView({ behavior: 'smooth' });
 };
+
