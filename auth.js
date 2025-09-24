@@ -76,7 +76,6 @@ class AuthManager {
     }
 
     updateUIAndNotify() {
-        document.querySelector('#authPage')?.classList.remove('active');
         this.updateUserUI(this.user);
         document.dispatchEvent(new CustomEvent('userStateReady', { detail: this.user }));
     }
@@ -113,12 +112,8 @@ class AuthManager {
             userSection.innerHTML = '<button class="login-btn">Войти</button>';
             const loginBtn = userSection.querySelector('.login-btn');
             if(loginBtn) {
-                 loginBtn.addEventListener('click', () => {
-                     const authPage = document.querySelector('#authPage');
-                     const discordSignInBtn = document.querySelector('#discordSignIn');
-                     if(authPage) authPage.classList.add('active');
-                     if(discordSignInBtn) discordSignInBtn.onclick = () => this.signInWithDiscord();
-                 });
+                 // ИЗМЕНЕНО: Прямой вызов авторизации без модального окна
+                 loginBtn.addEventListener('click', () => this.signInWithDiscord());
             }
         }
     }
