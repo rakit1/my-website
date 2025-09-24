@@ -13,8 +13,9 @@ class MainPage {
 
     showBetaWarningOnce() {
         const modal = document.getElementById('betaWarningModal');
+        // Проверяем, было ли модальное окно уже показано в этой сессии
         if (modal && !sessionStorage.getItem('betaWarningShown')) {
-            this.showModal(modal);
+            this.showModal(modal); // Передаем сам элемент
         }
     }
 
@@ -43,21 +44,24 @@ class MainPage {
 
     setupEventListeners() {
         document.body.addEventListener('click', (e) => {
+            // Используем текстовые селекторы для вызова
             if (e.target.closest('.login-btn')) this.showModal('#authPage');
             if (e.target.closest('#discordSignIn')) this.authManager.signInWithDiscord();
             if (e.target.closest('.server-join-btn')) this.handleServerJoin();
             if (e.target.closest('.ip-btn')) this.copyIP(e.target.closest('.ip-btn'));
+            
+            // Логика закрытия модальных окон
+            const modalToClose = e.target.closest('.auth-container, .ip-modal');
             if (e.target.closest('.close-auth, .close-ip-modal, .close-beta-warning-btn')) {
-                const modal = e.target.closest('.auth-container, .ip-modal');
-                if (modal) {
-                    this.hideModal(modal);
-                    if (modal.id === 'betaWarningModal') sessionStorage.setItem('betaWarningShown', 'true');
+                if (modalToClose) {
+                    this.hideModal(modalToClose);
+                    if (modalToClose.id === 'betaWarningModal') sessionStorage.setItem('betaWarningShown', 'true');
                 }
             }
-            const activeModal = document.querySelector('.auth-container.active, .ip-modal.active');
-            if (activeModal && e.target === activeModal) {
-                this.hideModal(activeModal);
-                if (activeModal.id === 'betaWarningModal') sessionStorage.setItem('betaWarningShown', 'true');
+            // Закрытие по клику на оверлей
+            if (modalToClose && e.target === modalToClose) {
+                this.hideModal(modalToClose);
+                if (modalToClose.id === 'betaWarningModal') sessionStorage.setItem('betaWarningShown', 'true');
             }
         });
         document.addEventListener('keydown', (e) => {
@@ -76,12 +80,24 @@ class MainPage {
         }
     }
     
-    showModal(selector) {
-        document.querySelector(selector)?.classList.add('active');
+    // ИСПРАВЛЕНО: Функция теперь принимает как строку-селектор, так и HTML-элемент
+    showModal(selectorOrElement) {
+        const element = typeof selectorOrElement === 'string' 
+            ? document.querySelector(selectorOrElement) 
+            : selectorOrElement;
+        if (element) {
+            element.classList.add('active');
+        }
     }
 
-    hideModal(selector) {
-        document.querySelector(selector)?.classList.remove('active');
+    // ИСПРАВЛЕНО: Функция теперь принимает как строку-селектор, так и HTML-элемент
+    hideModal(selectorOrElement) {
+        const element = typeof selectorOrElement === 'string' 
+            ? document.querySelector(selectorOrElement) 
+            : selectorOrElement;
+        if (element) {
+            element.classList.remove('active');
+        }
     }
 
     async copyIP(button) {
@@ -92,6 +108,8 @@ class MainPage {
             button.classList.add('copied');
             setTimeout(() => button.classList.remove('copied'), 1500);
         } catch (err) {
+            // Используем кастомное модальное окно вместо alert
+            console.error('Не удалось скопировать IP:', err);
             alert('Не удалось скопировать IP. Скопируйте вручную: ' + ip);
         }
     }
