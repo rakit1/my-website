@@ -1,162 +1,354 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>CBWorlds — Главная</title>
-<link rel="stylesheet" href="style.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realtime Chat Test</title>
+    <style>
+        /* --- Общие стили --- */
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --primary-color: #764abc;
+            --text-color: #e0e0e0;
+            --text-muted: #888;
+            --border-color: #333;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        /* --- Шапка --- */
+        header {
+            background: var(--surface-color);
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        h1 {
+            font-size: 1.2em;
+            margin: 0;
+            color: var(--primary-color);
+        }
+        #user-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid var(--primary-color);
+        }
+        button {
+            cursor: pointer;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            transition: background-color 0.2s ease;
+        }
+        button:hover {
+            background-color: #5d3a9b;
+        }
+        #logout-btn {
+            background-color: #444;
+        }
+
+        /* --- Контейнер чата --- */
+        #chat-container {
+            max-width: 700px;
+            margin: 30px auto;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            height: 75vh;
+            overflow: hidden;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+        }
+        #chat-box {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* --- Сообщения --- */
+        .message-wrapper {
+            display: flex;
+            flex-direction: column;
+            max-width: 75%;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message-author {
+            font-size: 0.8em;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+        .message-content {
+            padding: 10px 15px;
+            border-radius: 18px;
+            line-height: 1.4;
+        }
+
+        /* Сообщения других пользователей */
+        .other {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+        .other .message-content {
+            background: #333;
+            color: var(--text-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Сообщения текущего пользователя */
+        .user {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+        .user .message-content {
+            background: var(--primary-color);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .user .message-author {
+            text-align: right;
+        }
+
+        /* --- Форма отправки --- */
+        #message-form {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            background: var(--surface-color);
+        }
+        #message-form input {
+            flex-grow: 1;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        #message-form input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        #message-form button {
+            margin-left: 10px;
+        }
+    </style>
 </head>
 <body>
-
-<header>
-  <div class="logo">
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
-      <rect x="1" y="1" width="22" height="22" rx="6" fill="#111"/>
-      <circle cx="8.5" cy="10.5" r="3.3" fill="#635bff"/>
-      <circle cx="15.5" cy="13.7" r="2.2" fill="#f6f7fb" opacity="0.06"/>
-    </svg>
-    CBWORLDS
-  </div>
-
-  <nav>
-    <a href="index.html" class="active">Главная</a>
-    <a href="#">Как играть</a>
-    <a href="support.html">Поддержка</a>
-  </nav>
-
-  <div id="userSection">
-    <button class="login-btn">Войти</button>
-  </div>
-
-  <button class="mobile-menu-btn" aria-label="Открыть меню">
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
-</header>
-
-<main>
-  <div class="wrap">
-    <section class="hero">
-      <div class="hero-text">
-        <h1>Уникальные игровые серверы</h1>
-        <p>Здесь вы найдёте новые возможности, дружеское комьюнити и стабильный сервер без доната и приватов.</p>
-
-        <div class="online-realtime">
-          <div class="online-dot"></div>
-          <span class="online-text">Онлайн: <span id="online-count" class="online-number">...</span> игроков</span>
+    <header>
+        <h1>Realtime Chat Test</h1>
+        <div id="user-section">
+            <button id="login-btn">Войти через Discord</button>
         </div>
+    </header>
 
-        <div class="hero-actions">
-          <button class="btn btn-primary" onclick="scrollToServers()">Наши сервера</button>
-          <a href="https://discord.com" class="btn btn-discord" target="_blank" rel="noopener noreferrer" aria-label="Наш Discord сервер">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="discord-icon bi bi-discord" viewBox="0 0 16 16">
-              <path d="M13.545 2.907a13.227 13.227 0 0 0-3.257-1.011.05.05 0 0 0-.052.025c-.141.25-.297.577-.406.833a12.19 12.19 0 0 0-3.658 0 8.258 8.258 0 0 0-.412-.833.051.051 0 0 0-.052-.025c-1.125.194-2.22.534-3.257 1.011a.041.041 0 0 0-.021.018C.356 6.024-.213 9.047.066 12.032c.001.014.01.028.021.037a13.276 13.276 0 0 0 3.995 2.02.05.05 0 0 0 .056-.019c.308-.42.582-.863.818-1.329a.05.05 0 0 0-.01-.059.051.051 0 0 0-.018-.011 8.875 8.875 0 0 1-1.248-.595.05.05 0 0 1-.02-.066.051.051 0 0 1 .015-.019c.084-.063.168-.129.248-.195a.05.05 0 0 1 .051-.007c2.619 1.196 5.454 1.196 8.041 0a.052.052 0 0 1 .053.007c.08.066.164.132.248.195a.051.051 0 0 1-.004.085 8.254 8.254 0 0 1-1.249.594.05.05 0 0 0-.03.03.052.052 0 0 0 .003.041c.24.465.515.909.817 1.329a.05.05 0 0 0 .056.019 13.235 13.235 0 0 0 4.001-2.02.049.049 0 0 0 .021-.037c.334-3.451-.559-6.449-2.366-9.106a.034.034 0 0 0-.02-.019Zm-8.198 7.307c-.789 0-1.438-.724-1.438-1.612 0-.889.637-1.613 1.438-1.613.807 0 1.45.73 1.438 1.613 0 .888-.637 1.612-1.438 1.612Zm5.316 0c-.788 0-1.438-.724-1.438-1.612 0-.889.637-1.613 1.438-1.613.807 0 1.451.73 1.438 1.613 0 .888-.631 1.612-1.438 1.612Z"/>
-            </svg>
-            Discord
-          </a>
+    <main id="chat-container" style="display: none;">
+        <div id="chat-box">
+            <p class="system-message">Загрузка сообщений...</p>
         </div>
-      </div>
-      <div class="hero-media">
-        <div class="media-frame">
-          <img src="5opka.png" alt="Игровой баннер CBWorlds" loading="lazy" onerror="this.style.display='none'">
-        </div>
-      </div>
-    </section>
+        <form id="message-form">
+            <input type="text" name="message" placeholder="Введите сообщение..." required autocomplete="off">
+            <button type="submit">Отправить</button>
+        </form>
+    </main>
+
+    <!-- Подключение библиотеки Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <section class="features">
-      <h2 class="section-title">Наши преимущества</h2>
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon">🚀</div>
-          <h3>Высокая производительность</h3>
-          <p>Мощное железо обеспечивает стабильную работу без лагов и задержек даже при полной загрузке сервера.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🛡️</div>
-          <h3>Честный геймплей</h3>
-          <p>Никакого платного преимущества. Все игроки в равных условиях, без доната влияющего на баланс.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">👥</div>
-          <h3>Активное сообщество</h3>
-          <p>Присоединяйтесь к нашему дружелюбному комьюнити, где ценят каждого игрока и помогают новичкам.</p>
-        </div>
-      </div>
-    </section>
-    
-    <section class="servers" id="servers-section">
-      <h2 class="section-title">Наши сервера</h2>
-      <div class="server-cards">
-        <div class="server-card">
-          <div class="server-header">
-            <h3 class="server-name">CBWorlds</h3>
-            <span id="server-card-online" class="online-count">... онлайн</span>
-          </div>
-          <p class="server-info">Сервер для совместного строительства и творчества. Создавайте уникальные проекты вместе с другими игроками.</p>
-          <button class="server-join-btn" type="button" aria-label="Присоединиться к CBWorlds">Присоединиться</button>
-        </div>
-      </div>
-    </section>
-  </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- ВАШИ КЛЮЧИ SUPABASE УЖЕ ВСТАВЛЕНЫ ---
+            const SUPABASE_URL = 'https://xwryezubbsiptptmrevk.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3cnllenViYnNpcHRwdG1yZXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3MzYwMDEsImV4cCI6MjA3NDMxMjAwMX0.Mg8s-r4eatA4402TXVVHk-DIhE5xT-N21eikjKbFMNE';
 
-  <footer>
-    © 2025 CBWorlds. Все права защищены.
-  </footer>
-</main>
+            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-<div id="authPage" class="auth-container">
-  <div class="auth-box">
-    <button class="close-auth" aria-label="Закрыть окно авторизации">&times;</button>
-    <h2 class="auth-title">Войти через Discord</h2>
-    <p class="auth-description">Вход доступен только через Discord — безопасно и быстро.</p>
-    <button id="discordSignIn" class="btn-discord" style="cursor: pointer; margin: 0 auto; display: flex; align-items: center; gap: 8px; justify-content: center;">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="discord-icon bi bi-discord" viewBox="0 0 16 16">
-        <path d="M13.545 2.907a13.227 13.227 0 0 0-3.257-1.011.05.05 0 0 0-.052.025c-.141.25-.297.577-.406.833a12.19 12.19 0 0 0-3.658 0 8.258 8.258 0 0 0-.412-.833.051.051 0 0 0-.052-.025c-1.125.194-2.22.534-3.257 1.011a.041.041 0 0 0-.021.018C.356 6.024-.213 9.047.066 12.032c.001.014.01.028.021.037a13.276 13.276 0 0 0 3.995 2.02.05.05 0 0 0 .056-.019c.308-.42.582-.863.818-1.329a.05.05 0 0 0-.01-.059.051.051 0 0 0-.018-.011 8.875 8.875 0 0 1-1.248-.595.05.05 0 0 1-.02-.066.051.051 0 0 1 .015-.019c.084-.063.168-.129.248-.195a.05.05 0 0 1 .051-.007c2.619 1.196 5.454 1.196 8.041 0a.052.052 0 0 1 .053.007c.08.066.164.132.248.195a.051.051 0 0 1-.004.085 8.254 8.254 0 0 1-1.249.594.05.05 0 0 0-.03.03.052.052 0 0 0 .003.041c.24.465.515.909.817 1.329a.05.05 0 0 0 .056.019 13.235 13.235 0 0 0 4.001-2.02.049.049 0 0 0 .021-.037c.334-3.451-.559-6.449-2.366-9.106a.034.034 0 0 0-.02-.019Zm-8.198 7.307c-.789 0-1.438-.724-1.438-1.612 0-.889.637-1.613 1.438-1.613.807 0 1.45.73 1.438 1.613 0 .888-.637 1.612-1.438 1.612Zm5.316 0c-.788 0-1.438-.724-1.438-1.612 0-.889.637-1.613 1.438-1.613.807 0 1.451.73 1.438 1.613 0 .888-.631 1.612-1.438 1.612Z"/>
-      </svg>
-      Войти через Discord
-    </button>
-  </div>
-</div>
+            // --- Получение элементов со страницы ---
+            const userSection = document.getElementById('user-section');
+            const chatContainer = document.getElementById('chat-container');
+            const chatBox = document.getElementById('chat-box');
+            const messageForm = document.getElementById('message-form');
 
-<div id="ipModal" class="ip-modal">
-  <div class="ip-modal-content">
-    <button class="close-ip-modal" aria-label="Закрыть окно выбора IP">&times;</button>
-    <h3 class="ip-modal-title">Выберите регион для подключения</h3>
-    <div class="ip-buttons">
-      <button class="ip-btn" data-ip="cobuilding.aboba.host" aria-label="Скопировать Российский IP адрес">
-        <div>
-          <div class="ip-address">cobuilding.aboba.host</div>
-          <div class="ip-region">Российский регион (для стабильного подключения из РФ)</div>
-        </div>
-        <div class="copy-indicator">Скопировано!</div>
-      </button>
-      <button class="ip-btn" data-ip="cbworlds.aboba.host" aria-label="Скопировать Европейский IP адрес">
-        <div>
-          <div class="ip-address">cbworlds.aboba.host</div>
-          <div class="ip-region">Европейский регион</div>
-        </div>
-        <div class="copy-indicator">Скопировано!</div>
-      </button>
-    </div>
-  </div>
-</div>
+            let currentUser = null;
+            let messagesSubscription = null;
 
-<div id="betaWarningModal" class="auth-container">
-  <div class="auth-box">
-    <button class="close-auth" aria-label="Закрыть">&times;</button>
-    <h2 class="auth-title">Добро пожаловать!</h2>
-    <p class="auth-description">Сайт находится в режиме бета-тестирования. Если вы обнаружите какие-либо ошибки или у вас есть предложения, пожалуйста, сообщите нам через <a href="support.html" style="color: var(--primary);">службу поддержки</a>.</p>
-    <button class="btn btn-primary close-beta-warning-btn">Я понимаю</button>
-  </div>
-</div>
+            // --- ЛОГИКА АВТОРИЗАЦИИ ---
+            const setupAuth = async () => {
+                const { data: { session } } = await supabase.auth.getSession();
+                updateUI(session);
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="auth.js"></script>
-<script src="script.js"></script>
-<script src="transition.js"></script> 
+                supabase.auth.onAuthStateChange((_event, session) => {
+                    updateUI(session);
+                });
+            };
+
+            const updateUI = (session) => {
+                if (session && session.user) {
+                    currentUser = session.user;
+                    const { full_name, avatar_url } = currentUser.user_metadata;
+                    userSection.innerHTML = `
+                        <span>${full_name}</span>
+                        <img src="${avatar_url}" alt="Аватар" class="user-avatar">
+                        <button id="logout-btn">Выйти</button>
+                    `;
+                    chatContainer.style.display = 'flex';
+                    loadInitialMessages();
+                    subscribeToMessages(); // Подписываемся на сообщения только после входа
+                } else {
+                    currentUser = null;
+                    userSection.innerHTML = '<button id="login-btn">Войти через Discord</button>';
+                    chatContainer.style.display = 'none';
+                    if (messagesSubscription) {
+                        messagesSubscription.unsubscribe(); // Отписываемся при выходе
+                    }
+                }
+            };
+
+            document.body.addEventListener('click', (event) => {
+                if (event.target.id === 'login-btn') {
+                    supabase.auth.signInWithOAuth({ provider: 'discord' });
+                }
+                if (event.target.id === 'logout-btn') {
+                    supabase.auth.signOut();
+                }
+            });
+
+            // --- ЛОГИКА ЧАТА ---
+            const loadInitialMessages = async () => {
+                const { data: messages, error } = await supabase
+                    .from('messages')
+                    .select('*, profile:profiles(username)')
+                    .order('created_at', { ascending: true });
+
+                if (error) {
+                    console.error('Ошибка загрузки сообщений:', error);
+                    return;
+                }
+
+                chatBox.innerHTML = '';
+                messages.forEach(addMessageToBox);
+                scrollToBottom();
+            };
+
+            const handleNewMessage = async (payload) => {
+                console.log('Realtime получил новое сообщение!', payload);
+                
+                const newMessage = payload.new;
+                
+                // Realtime не присылает данные из связанных таблиц,
+                // поэтому нам нужно самим запросить имя пользователя
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('username')
+                    .eq('id', newMessage.user_id)
+                    .single();
+
+                if (error) {
+                    console.error('Ошибка загрузки профиля для сообщения:', error);
+                    return;
+                }
+                
+                newMessage.profile = profile;
+                addMessageToBox(newMessage);
+                scrollToBottom();
+            };
+
+            const addMessageToBox = (message) => {
+                const wrapper = document.createElement('div');
+                const isUserMessage = message.user_id === currentUser.id;
+                wrapper.classList.add('message-wrapper', isUserMessage ? 'user' : 'other');
+                
+                const authorName = isUserMessage ? 'Вы' : (message.profile ? message.profile.username : 'Неизвестно');
+
+                wrapper.innerHTML = `
+                    <div class="message-author">${authorName}</div>
+                    <div class="message-content">${escapeHTML(message.content)}</div>
+                `;
+                chatBox.appendChild(wrapper);
+            };
+
+            messageForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const input = event.target.elements.message;
+                const content = input.value.trim();
+                if (!content) return;
+
+                // Отключаем кнопку на время отправки
+                const submitButton = event.target.querySelector('button');
+                submitButton.disabled = true;
+
+                const { error } = await supabase
+                    .from('messages')
+                    .insert({ content, user_id: currentUser.id });
+
+                if (error) {
+                    console.error('Ошибка отправки сообщения:', error);
+                } else {
+                    input.value = '';
+                }
+                submitButton.disabled = false;
+                input.focus();
+            });
+            
+            // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
+            const scrollToBottom = () => {
+                chatBox.scrollTop = chatBox.scrollHeight;
+            };
+
+            const escapeHTML = (str) => {
+                const p = document.createElement("p");
+                p.textContent = str;
+                return p.innerHTML;
+            };
+
+            // --- ПОДПИСКА НА REALTIME ---
+            const subscribeToMessages = () => {
+                if (messagesSubscription) {
+                    messagesSubscription.unsubscribe();
+                }
+
+                messagesSubscription = supabase.channel('public:messages')
+                    .on(
+                        'postgres_changes',
+                        { event: 'INSERT', schema: 'public', table: 'messages' },
+                        handleNewMessage
+                    )
+                    .subscribe((status, err) => {
+                        if (status === 'SUBSCRIBED') {
+                            console.log('✅ Успешная подписка на Realtime!');
+                        }
+                        if (status === 'CHANNEL_ERROR') {
+                            console.error('Ошибка подписки:', err);
+                        }
+                    });
+            };
+
+            // --- ЗАПУСК ПРИЛОЖЕНИЯ ---
+            setupAuth();
+        });
+    </script>
 </body>
 </html>
