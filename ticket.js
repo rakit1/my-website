@@ -4,11 +4,9 @@ class TicketPage {
         this.supabase = authManager.supabase;
         this.user = null;
         
-        // Получаем ID тикета и убеждаемся, что это UUID
         const urlParams = new URLSearchParams(window.location.search);
         const ticketIdParam = urlParams.get('id');
         
-        // Если ID это число, преобразуем в UUID формат (если нужно)
         this.ticketId = this.normalizeTicketId(ticketIdParam);
         
         this.isCurrentUserAdmin = false;
@@ -29,12 +27,8 @@ class TicketPage {
         this.init();
     }
 
-    // Функция для нормализации ID тикета
     normalizeTicketId(ticketId) {
         if (!ticketId) return null;
-        
-        // Если это число, возможно нужно преобразовать в UUID формат
-        // Или просто вернуть как есть, если ваша база использует текстовые ID
         return ticketId;
     }
 
@@ -43,8 +37,6 @@ class TicketPage {
             window.location.href = 'account.html';
             return;
         }
-        
-        console.log('Loading ticket with ID:', this.ticketId, 'Type:', typeof this.ticketId);
         
         const { data: { user } } = await this.supabase.auth.getUser();
         if (user) {
@@ -59,9 +51,6 @@ class TicketPage {
 
     async loadInitialData() {
         try {
-            console.log('Starting to load ticket data for ID:', this.ticketId);
-
-            // Сначала проверяем существование тикета
             const { data: ticketData, error: ticketError } = await this.supabase
                 .from('tickets')
                 .select('id, user_id, is_closed')
@@ -69,50 +58,46 @@ class TicketPage {
                 .single();
                 
             if (ticketError) {
-                console.error('Ticket error:', ticketError);
                 throw new Error("Тикет не найден или у вас нет к нему доступа.");
             }
 
-            console.log('Ticket found:', ticketData);
-
-            // Проверяем роль пользователя
-            const { data: userProfile, error: profileError } = await this.supabase
+            // --- ИЗМЕНЕНИЕ НАЧАТО ---
+            // Загружаем профиль пользователя и обрабатываем случай, если он не найден
+            let { data: userProfile, error: profileError } = await this.supabase
                 .from('profiles')
                 .select('username, avatar_url, role')
                 .eq('id', this.user.id)
                 .single();
-                
-            if (profileError) {
-                console.error('Profile error:', profileError);
+
+            // Если профиль не найден (ошибка 'PGRST116'), используем данные по умолчанию из Discord
+            if (profileError && profileError.code === 'PGRST116') {
+                console.warn('Профиль пользователя не найден, используются данные по умолчанию.');
+                userProfile = {
+                    username: this.user.user_metadata?.full_name || 'Пользователь',
+                    avatar_url: this.user.user_metadata?.avatar_url || null,
+                    role: 'Игрок'
+                };
+            } else if (profileError) {
+                // Если произошла другая, более серьезная ошибка, то прекращаем выполнение
                 throw new Error("Не удалось загрузить профиль пользователя.");
             }
+            // --- ИЗМЕНЕНИЕ ОКОНЧЕНО ---
 
             this.isCurrentUserAdmin = userProfile?.role === 'Администратор';
-            console.log('User is admin:', this.isCurrentUserAdmin);
 
-            // Проверяем права доступа
             if (!this.isCurrentUserAdmin && ticketData.user_id !== this.user.id) {
                 throw new Error("У вас нет доступа к этому тикету.");
             }
 
             this.isTicketClosed = ticketData.is_closed;
-            console.log('Ticket closed status:', this.isTicketClosed);
 
-            // Используем RPC функцию для получения сообщений
-            console.log('Calling RPC function with ticket ID:', this.ticketId);
             const { data: messages, error: messagesError } = await this.supabase
-                .rpc('get_accessible_ticket_messages', { 
-                    p_ticket_id: this.ticketId 
-                });
+                .rpc('get_accessible_ticket_messages', { p_ticket_id: this.ticketId });
 
             if (messagesError) {
-                console.error('RPC Error details:', messagesError);
                 throw new Error("Не удалось загрузить сообщения: " + messagesError.message);
             }
 
-            console.log('Messages loaded:', messages);
-
-            // Сохраняем информацию об авторах
             if (messages && messages.length > 0) {
                 messages.forEach(msg => {
                     this.participants.set(msg.user_id, {
@@ -123,19 +108,17 @@ class TicketPage {
                 });
             }
 
-            // Добавляем текущего пользователя в участники если его нет
             if (!this.participants.has(this.user.id)) {
                 this.participants.set(this.user.id, {
-                    username: userProfile?.username || 'Пользователь',
-                    avatar_url: userProfile?.avatar_url || null,
-                    role: userProfile?.role || 'Игрок'
+                    username: userProfile.username,
+                    avatar_url: userProfile.avatar_url,
+                    role: userProfile.role
                 });
             }
 
             this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
             this.updateTicketUI();
 
-            // Отображаем сообщения
             this.chatBox.innerHTML = '';
             if (messages && messages.length > 0) {
                 messages.forEach(msg => this.addMessageToBox(msg));
@@ -145,25 +128,19 @@ class TicketPage {
             this.scrollToBottom();
 
         } catch (error) {
-            console.error('Load initial data error:', error);
+            console.error('Ошибка при загрузке данных:', error);
             this.showError(error.message);
         }
     }
 
     subscribeToUpdates() {
         try {
-            // Канал для обновлений сообщений
             const channelName = `ticket_chat:${this.ticketId}`;
-            
             this.channel = this.supabase.channel(channelName);
 
-            // Слушаем новые сообщения через broadcast
             this.channel.on('broadcast', { event: 'new_message' }, async ({ payload }) => {
                 try {
                     const newMessage = payload.new;
-                    console.log('New message received:', newMessage);
-                    
-                    // Проверяем доступ к сообщению через прямой запрос
                     const { data: messageWithAccess, error } = await this.supabase
                         .from('messages')
                         .select('*')
@@ -172,7 +149,6 @@ class TicketPage {
                         .single();
 
                     if (!error && messageWithAccess) {
-                        // Загружаем профиль автора если нужно
                         if (!this.participants.has(newMessage.user_id)) {
                             const { data: profile } = await this.supabase
                                 .from('profiles')
@@ -180,20 +156,17 @@ class TicketPage {
                                 .eq('id', newMessage.user_id)
                                 .single();
                             
-                            if (profile) {
-                                this.participants.set(newMessage.user_id, profile);
-                            }
+                            if (profile) this.participants.set(newMessage.user_id, profile);
                         }
                         
                         this.addMessageToBox(newMessage);
                         this.scrollToBottom();
                     }
                 } catch (error) {
-                    console.error('Error processing new message:', error);
+                    console.error('Ошибка обработки нового сообщения:', error);
                 }
             }).subscribe();
 
-            // Слушаем обновления статуса тикета
             this.supabase.channel(`ticket-status-${this.ticketId}`)
                 .on('postgres_changes', {
                     event: 'UPDATE',
@@ -207,37 +180,27 @@ class TicketPage {
                     }
                 }).subscribe();
 
-            console.log('Subscribed to updates for ticket:', this.ticketId);
-
         } catch (error) {
-            console.error('Error subscribing to updates:', error);
+            console.error('Ошибка подписки на обновления:', error);
         }
     }
 
-    // Остальные методы остаются без изменений
     async handleSubmit(event) {
         event.preventDefault();
         const content = this.messageForm.elements.message.value.trim();
-        
         if (!content || this.isTicketClosed) return;
 
         this.sendMessageButton.disabled = true;
 
         try {
-            // Вставляем новое сообщение
             const { data: newMessage, error } = await this.supabase
                 .from('messages')
-                .insert({
-                    ticket_id: this.ticketId,
-                    user_id: this.user.id,
-                    content: content
-                })
+                .insert({ ticket_id: this.ticketId, user_id: this.user.id, content: content })
                 .select()
                 .single();
 
             if (error) throw error;
             
-            // Отправляем уведомление в канал
             if (this.channel) {
                 await this.channel.send({
                     type: 'broadcast',
@@ -248,7 +211,6 @@ class TicketPage {
 
             this.messageForm.reset();
         } catch (error) {
-            console.error('Send message error:', error);
             alert('Ошибка отправки сообщения: ' + error.message);
         } finally {
             this.sendMessageButton.disabled = false;
@@ -306,15 +268,12 @@ class TicketPage {
 
     setupEventListeners() {
         this.messageForm.addEventListener('submit', (e) => this.handleSubmit(e));
-        
         this.closeTicketButton.addEventListener('click', () => {
             if (!this.isTicketClosed) this.confirmationModal.classList.add('active');
         });
-        
         this.cancelCloseBtn.addEventListener('click', () => {
             this.confirmationModal.classList.remove('active');
         });
-        
         this.confirmCloseBtn.addEventListener('click', () => this.executeTicketClosure());
     }
 
@@ -337,7 +296,6 @@ class TicketPage {
             
             this.confirmationModal.classList.remove('active');
         } catch (error) {
-            console.error('Close ticket error:', error);
             alert('Ошибка при закрытии тикета: ' + error.message);
         } finally {
             this.confirmCloseBtn.disabled = false;
