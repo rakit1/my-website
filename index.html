@@ -3,350 +3,244 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Realtime Chat Test</title>
+    <title>Private Realtime Chat</title>
     <style>
-        /* --- Общие стили --- */
         :root {
-            --bg-color: #121212;
-            --surface-color: #1e1e1e;
-            --primary-color: #764abc;
-            --text-color: #e0e0e0;
-            --text-muted: #888;
-            --border-color: #333;
+            --bg-color: #121212; --surface-color: #1e1e1e; --primary-color: #764abc;
+            --text-color: #e0e0e0; --text-muted: #888; --border-color: #333;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            margin: 0; background-color: var(--bg-color); color: var(--text-color); overflow: hidden;
         }
-
-        /* --- Шапка --- */
         header {
-            background: var(--surface-color);
-            padding: 15px 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
+            background: var(--surface-color); padding: 15px 25px; display: flex;
+            justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color);
         }
-        h1 {
-            font-size: 1.2em;
-            margin: 0;
-            color: var(--primary-color);
-        }
-        #user-section {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .user-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: 2px solid var(--primary-color);
-        }
-        button {
-            cursor: pointer;
-            padding: 10px 16px;
-            border: none;
-            border-radius: 8px;
-            background-color: var(--primary-color);
-            color: white;
-            font-weight: 600;
-            transition: background-color 0.2s ease;
-        }
-        button:hover {
-            background-color: #5d3a9b;
-        }
-        #logout-btn {
-            background-color: #444;
-        }
+        h1 { font-size: 1.2em; margin: 0; color: var(--primary-color); }
+        #user-section { display: flex; align-items: center; gap: 12px; }
+        .user-avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--primary-color); }
+        button { cursor: pointer; padding: 10px 16px; border: none; border-radius: 8px; background-color: var(--primary-color); color: white; font-weight: 600; transition: background-color 0.2s ease; }
+        button:hover { background-color: #5d3a9b; }
 
-        /* --- Контейнер чата --- */
-        #chat-container {
-            max-width: 700px;
-            margin: 30px auto;
-            background: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            height: 75vh;
-            overflow: hidden;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
-        }
-        #chat-box {
-            flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
+        #app-layout { display: flex; height: calc(100vh - 70px); }
+        
+        #user-list-panel { width: 300px; background: var(--surface-color); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
+        #user-list-panel h2 { padding: 15px; margin: 0; font-size: 1em; border-bottom: 1px solid var(--border-color); }
+        #user-list { overflow-y: auto; flex-grow: 1; }
+        .user-item { display: flex; align-items: center; gap: 10px; padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); transition: background-color 0.2s; }
+        .user-item:hover { background-color: #2a2a2a; }
+        .user-item.active { background-color: var(--primary-color); }
+        .user-item-avatar { width: 40px; height: 40px; border-radius: 50%; }
 
-        /* --- Сообщения --- */
-        .message-wrapper {
-            display: flex;
-            flex-direction: column;
-            max-width: 75%;
-            animation: fadeIn 0.3s ease;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .message-author {
-            font-size: 0.8em;
-            color: var(--text-muted);
-            margin-bottom: 5px;
-        }
-        .message-content {
-            padding: 10px 15px;
-            border-radius: 18px;
-            line-height: 1.4;
-        }
-
-        /* Сообщения других пользователей */
-        .other {
-            align-self: flex-start;
-            align-items: flex-start;
-        }
-        .other .message-content {
-            background: #333;
-            color: var(--text-color);
-            border-bottom-left-radius: 4px;
-        }
-
-        /* Сообщения текущего пользователя */
-        .user {
-            align-self: flex-end;
-            align-items: flex-end;
-        }
-        .user .message-content {
-            background: var(--primary-color);
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-        .user .message-author {
-            text-align: right;
-        }
-
-        /* --- Форма отправки --- */
-        #message-form {
-            display: flex;
-            padding: 15px;
-            border-top: 1px solid var(--border-color);
-            background: var(--surface-color);
-        }
+        #chat-view { flex-grow: 1; display: flex; flex-direction: column; }
+        #chat-placeholder { display: flex; justify-content: center; align-items: center; height: 100%; color: var(--text-muted); }
+        #chat-container { display: flex; flex-direction: column; height: 100%; }
+        #chat-header { padding: 15px 20px; border-bottom: 1px solid var(--border-color); font-weight: bold; }
+        #chat-box { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        #message-form { display: flex; padding: 15px; border-top: 1px solid var(--border-color); }
         #message-form input {
-            flex-grow: 1;
-            background: var(--bg-color);
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 1em;
+            flex-grow: 1; background: var(--bg-color); border: 1px solid var(--border-color);
+            color: var(--text-color); padding: 12px; border-radius: 8px; font-size: 1em;
         }
-        #message-form input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-        }
-        #message-form button {
-            margin-left: 10px;
-        }
+
+        .message-wrapper { max-width: 75%; display: flex; flex-direction: column; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .message-author { font-size: 0.8em; color: var(--text-muted); margin-bottom: 5px; }
+        .message-content { padding: 10px 15px; border-radius: 18px; line-height: 1.4; word-break: break-word; }
+        .other { align-self: flex-start; align-items: flex-start; }
+        .other .message-content { background: #333; color: var(--text-color); border-bottom-left-radius: 4px; }
+        .user { align-self: flex-end; align-items: flex-end; }
+        .user .message-content { background: var(--primary-color); color: white; border-bottom-right-radius: 4px; }
+        .user .message-author { text-align: right; }
     </style>
 </head>
 <body>
     <header>
-        <h1>Realtime Chat Test</h1>
-        <div id="user-section">
-            <button id="login-btn">Войти через Discord</button>
-        </div>
+        <h1>Private Realtime Chat</h1>
+        <div id="user-section"> <button id="login-btn">Войти через Discord</button> </div>
     </header>
 
-    <main id="chat-container" style="display: none;">
-        <div id="chat-box">
-            <p class="system-message">Загрузка сообщений...</p>
-        </div>
-        <form id="message-form">
-            <input type="text" name="message" placeholder="Введите сообщение..." required autocomplete="off">
-            <button type="submit">Отправить</button>
-        </form>
-    </main>
+    <div id="app-layout" style="display: none;">
+        <aside id="user-list-panel">
+            <h2>Пользователи</h2>
+            <div id="user-list"></div>
+        </aside>
+        <main id="chat-view">
+            <div id="chat-placeholder"> <p>Выберите пользователя, чтобы начать диалог</p> </div>
+            <div id="chat-container" style="display: none;">
+                <header id="chat-header"></header>
+                <div id="chat-box"></div>
+                <form id="message-form">
+                    <input type="text" name="message" placeholder="Введите сообщение..." required autocomplete="off">
+                    <button type="submit">Отправить</button>
+                </form>
+            </div>
+        </main>
+    </div>
 
-    <!-- Подключение библиотеки Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- ВАШИ КЛЮЧИ SUPABASE УЖЕ ВСТАВЛЕНЫ ---
             const SUPABASE_URL = 'https://xwryezubbsiptptmrevk.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3cnllenViYnNpcHRwdG1yZXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3MzYwMDEsImV4cCI6MjA3NDMxMjAwMX0.Mg8s-r4eatA4402TXVVHk-DIhE5xT-N21eikjKbFMNE';
-
             const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-            // --- Получение элементов со страницы ---
             const userSection = document.getElementById('user-section');
+            const appLayout = document.getElementById('app-layout');
+            const userList = document.getElementById('user-list');
+            const chatPlaceholder = document.getElementById('chat-placeholder');
             const chatContainer = document.getElementById('chat-container');
+            const chatHeader = document.getElementById('chat-header');
             const chatBox = document.getElementById('chat-box');
             const messageForm = document.getElementById('message-form');
 
             let currentUser = null;
-            let messagesSubscription = null;
+            let activeConversationId = null;
+            let realtimeSubscription = null;
 
-            // --- ЛОГИКА АВТОРИЗАЦИИ ---
             const setupAuth = async () => {
                 const { data: { session } } = await supabase.auth.getSession();
                 updateUI(session);
-
-                supabase.auth.onAuthStateChange((_event, session) => {
-                    updateUI(session);
-                });
+                supabase.auth.onAuthStateChange((_event, session) => updateUI(session));
             };
 
             const updateUI = (session) => {
                 if (session && session.user) {
                     currentUser = session.user;
-                    const { full_name, avatar_url } = currentUser.user_metadata;
-                    userSection.innerHTML = `
-                        <span>${full_name}</span>
-                        <img src="${avatar_url}" alt="Аватар" class="user-avatar">
-                        <button id="logout-btn">Выйти</button>
-                    `;
-                    chatContainer.style.display = 'flex';
-                    loadInitialMessages();
-                    subscribeToMessages(); // Подписываемся на сообщения только после входа
+                    userSection.innerHTML = `<span>${currentUser.user_metadata.full_name}</span><img src="${currentUser.user_metadata.avatar_url}" alt="Аватар" class="user-avatar"><button id="logout-btn">Выйти</button>`;
+                    appLayout.style.display = 'flex';
+                    loadUsers();
                 } else {
                     currentUser = null;
                     userSection.innerHTML = '<button id="login-btn">Войти через Discord</button>';
-                    chatContainer.style.display = 'none';
-                    if (messagesSubscription) {
-                        messagesSubscription.unsubscribe(); // Отписываемся при выходе
-                    }
+                    appLayout.style.display = 'none';
                 }
             };
 
-            document.body.addEventListener('click', (event) => {
-                if (event.target.id === 'login-btn') {
-                    supabase.auth.signInWithOAuth({ provider: 'discord' });
-                }
-                if (event.target.id === 'logout-btn') {
-                    supabase.auth.signOut();
-                }
+            document.body.addEventListener('click', (e) => {
+                if (e.target.id === 'login-btn') supabase.auth.signInWithOAuth({ provider: 'discord' });
+                if (e.target.id === 'logout-btn') supabase.auth.signOut();
             });
 
-            // --- ЛОГИКА ЧАТА ---
-            const loadInitialMessages = async () => {
-                const { data: messages, error } = await supabase
-                    .from('messages')
-                    .select('*, profile:profiles(username)')
-                    .order('created_at', { ascending: true });
-
-                if (error) {
-                    console.error('Ошибка загрузки сообщений:', error);
-                    return;
-                }
-
-                chatBox.innerHTML = '';
-                messages.forEach(addMessageToBox);
-                scrollToBottom();
+            const loadUsers = async () => {
+                const { data, error } = await supabase.from('profiles').select('*').neq('id', currentUser.id);
+                if (error) { console.error("Ошибка загрузки пользователей:", error); return; }
+                
+                userList.innerHTML = '';
+                data.forEach(user => {
+                    const userDiv = document.createElement('div');
+                    userDiv.className = 'user-item';
+                    userDiv.dataset.userId = user.id;
+                    userDiv.innerHTML = `<img src="${user.avatar_url}" class="user-item-avatar"><p>${user.username}</p>`;
+                    userDiv.addEventListener('click', () => handleUserClick(user.id, user.username, userDiv));
+                    userList.appendChild(userDiv);
+                });
             };
 
-            const handleNewMessage = async (payload) => {
-                console.log('Realtime получил новое сообщение!', payload);
-                
-                const newMessage = payload.new;
-                
-                // Realtime не присылает данные из связанных таблиц,
-                // поэтому нам нужно самим запросить имя пользователя
-                const { data: profile, error } = await supabase
-                    .from('profiles')
-                    .select('username')
-                    .eq('id', newMessage.user_id)
-                    .single();
+            const handleUserClick = async (userId, username, element) => {
+                document.querySelectorAll('.user-item.active').forEach(el => el.classList.remove('active'));
+                element.classList.add('active');
 
-                if (error) {
-                    console.error('Ошибка загрузки профиля для сообщения:', error);
-                    return;
-                }
+                const { data, error } = await findOrCreateConversation(userId);
+                if (error) { console.error("Не удалось начать диалог:", error); return; }
                 
-                newMessage.profile = profile;
-                addMessageToBox(newMessage);
+                activeConversationId = data.id;
+                loadConversation(username);
+            };
+
+            const loadConversation = async (username) => {
+                chatPlaceholder.style.display = 'none';
+                chatContainer.style.display = 'flex';
+                chatHeader.innerText = `Диалог с ${username}`;
+                
+                const { data, error } = await supabase.from('private_messages')
+                    .select('*, author:profiles(username, avatar_url)')
+                    .eq('conversation_id', activeConversationId)
+                    .order('created_at');
+
+                if (error) { console.error("Ошибка загрузки сообщений:", error); return; }
+
+                chatBox.innerHTML = '';
+                data.forEach(addMessageToBox);
                 scrollToBottom();
+                subscribeToConversation(activeConversationId);
+            };
+            
+            const subscribeToConversation = (conversationId) => {
+                if (realtimeSubscription) realtimeSubscription.unsubscribe();
+
+                realtimeSubscription = supabase.channel(`conversation_${conversationId}`)
+                    .on('postgres_changes', {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'private_messages',
+                        filter: `conversation_id=eq.${conversationId}`
+                    }, async (payload) => {
+                        const newMessage = payload.new;
+                        if (newMessage.author_id === currentUser.id) return; // Не дублируем свои сообщения
+
+                        const { data: profile } = await supabase.from('profiles').select('username').eq('id', newMessage.author_id).single();
+                        newMessage.author = profile;
+                        addMessageToBox(newMessage);
+                        scrollToBottom();
+                    })
+                    .subscribe();
             };
 
             const addMessageToBox = (message) => {
                 const wrapper = document.createElement('div');
-                const isUserMessage = message.user_id === currentUser.id;
-                wrapper.classList.add('message-wrapper', isUserMessage ? 'user' : 'other');
-                
-                const authorName = isUserMessage ? 'Вы' : (message.profile ? message.profile.username : 'Неизвестно');
-
-                wrapper.innerHTML = `
-                    <div class="message-author">${authorName}</div>
-                    <div class="message-content">${escapeHTML(message.content)}</div>
-                `;
+                const isUserMessage = message.author_id === currentUser.id;
+                wrapper.className = `message-wrapper ${isUserMessage ? 'user' : 'other'}`;
+                const authorName = isUserMessage ? 'Вы' : message.author.username;
+                wrapper.innerHTML = `<div class="message-author">${authorName}</div><div class="message-content">${escapeHTML(message.content)}</div>`;
                 chatBox.appendChild(wrapper);
             };
-
-            messageForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                const input = event.target.elements.message;
+            
+            messageForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!activeConversationId) return;
+                const input = e.target.elements.message;
                 const content = input.value.trim();
                 if (!content) return;
 
-                // Отключаем кнопку на время отправки
-                const submitButton = event.target.querySelector('button');
-                submitButton.disabled = true;
-
-                const { error } = await supabase
-                    .from('messages')
-                    .insert({ content, user_id: currentUser.id });
-
+                const { data, error } = await supabase.from('private_messages').insert({
+                    content,
+                    conversation_id: activeConversationId,
+                    author_id: currentUser.id
+                }).select('*, author:profiles(username)').single();
+                
                 if (error) {
-                    console.error('Ошибка отправки сообщения:', error);
+                    console.error("Ошибка отправки:", error);
                 } else {
+                    addMessageToBox(data); // Сразу добавляем свое сообщение
+                    scrollToBottom();
                     input.value = '';
                 }
-                submitButton.disabled = false;
-                input.focus();
             });
+
+            const findOrCreateConversation = async (otherUserId) => {
+                const { data: existing, error } = await supabase.rpc('find_conversation_by_users', { user1_id: currentUser.id, user2_id: otherUserId });
+                if (error) return { error };
+                if (existing.length > 0) return { data: existing[0] };
+                
+                const { data: newConv, error: newConvError } = await supabase.from('conversations').insert({}).select().single();
+                if (newConvError) return { error: newConvError };
+
+                const { error: participantsError } = await supabase.from('conversation_participants').insert([
+                    { conversation_id: newConv.id, user_id: currentUser.id },
+                    { conversation_id: newConv.id, user_id: otherUserId }
+                ]);
+                if (participantsError) return { error: participantsError };
+
+                return { data: newConv };
+            };
             
-            // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
-            const scrollToBottom = () => {
-                chatBox.scrollTop = chatBox.scrollHeight;
-            };
-
+            const scrollToBottom = () => { chatBox.scrollTop = chatBox.scrollHeight; };
             const escapeHTML = (str) => {
-                const p = document.createElement("p");
-                p.textContent = str;
-                return p.innerHTML;
+                const p = document.createElement("p"); p.textContent = str; return p.innerHTML;
             };
 
-            // --- ПОДПИСКА НА REALTIME ---
-            const subscribeToMessages = () => {
-                if (messagesSubscription) {
-                    messagesSubscription.unsubscribe();
-                }
-
-                messagesSubscription = supabase.channel('public:messages')
-                    .on(
-                        'postgres_changes',
-                        { event: 'INSERT', schema: 'public', table: 'messages' },
-                        handleNewMessage
-                    )
-                    .subscribe((status, err) => {
-                        if (status === 'SUBSCRIBED') {
-                            console.log('✅ Успешная подписка на Realtime!');
-                        }
-                        if (status === 'CHANNEL_ERROR') {
-                            console.error('Ошибка подписки:', err);
-                        }
-                    });
-            };
-
-            // --- ЗАПУСК ПРИЛОЖЕНИЯ ---
             setupAuth();
         });
     </script>
