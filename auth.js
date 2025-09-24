@@ -17,71 +17,88 @@ class AuthManager {
 
         this.auth = firebase.auth();
         this.db = firebase.firestore();
-        this.user = null;
-
+        this.user = null; // Здесь будет храниться информация о пользователе
         this.init();
     }
 
-    // 2. ЗАПУСК ВСЕХ ПРОЦЕССОВ
-    init() {
-        this.updateUserUI(null, true); // Сразу показываем статус "Проверка..."
-        this.handleRedirectResult();
-        this.listenForAuthStateChanges();
+    // 2. ГЛАВНАЯ ЛОГИКА
+    async init() {
+        this.updateUserUI(null, true); // Сразу показываем "Проверка..."
+        
+        try {
+            // Сначала обрабатываем результат редиректа
+            const result = await this.auth.getRedirectResult();
+            if (result && result.user) {
+                // Если пользователь только что вошел, создаем для него профиль, если он новый
+                await this.createUserProfileIfNotExists(result.user, result.additionalUserInfo.profile);
+            }
+            
+            // Теперь устанавливаем постоянный слушатель на изменение статуса авторизации
+            this.listenForAuthStateChanges();
 
+        } catch (error) {
+            console.error('Критическая ошибка при инициализации авторизации:', error);
+            this.updateUserUI(null); // Если ошибка, показываем кнопку "Войти"
+        }
+
+        // Вешаем глобальный обработчик на кнопку выхода
         document.addEventListener('click', (event) => {
             if (event.target.closest('.logout-btn')) {
                 this.signOut();
             }
         });
     }
-    
-    // 3. ОБРАБОТКА ВОЗВРАЩЕНИЯ С DISCORD
-    async handleRedirectResult() {
-        try {
-            const result = await this.auth.getRedirectResult();
-            if (result && result.user) {
-                const firebaseUser = result.user;
-                const userProfileRef = this.db.collection('profiles').doc(firebaseUser.uid);
-                const userProfileDoc = await userProfileRef.get();
 
-                if (!userProfileDoc.exists) {
-                    const profile = result.additionalUserInfo.profile;
-                    const newProfileData = {
-                        username: profile.username || firebaseUser.displayName,
-                        email: profile.email || firebaseUser.email,
-                        avatar_url: profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : firebaseUser.photoURL,
-                        role: 'Игрок'
-                    };
-                    await userProfileRef.set(newProfileData);
-                }
-            }
-        } catch (error) {
-            console.error('Ошибка при обработке редиректа:', error.code, error.message);
-        }
-    }
-
-    // 4. СЛЕЖЕНИЕ ЗА СТАТУСОМ АВТОРИЗАЦИИ
+    // 3. СЛУШАТЕЛЬ ИЗМЕНЕНИЯ СТАТУСА
     listenForAuthStateChanges() {
         this.auth.onAuthStateChanged(async (firebaseUser) => {
             if (firebaseUser) {
-                const userProfileRef = this.db.collection('profiles').doc(firebaseUser.uid);
-                const userProfileDoc = await userProfileRef.get();
-
-                if (userProfileDoc.exists) {
-                    this.user = { uid: firebaseUser.uid, ...userProfileDoc.data() };
+                // Пользователь вошел. Загружаем его профиль.
+                const userProfile = await this.getUserProfile(firebaseUser.uid);
+                if (userProfile) {
+                    this.user = userProfile;
                     this.updateUserUI(this.user);
                 } else {
+                    // Профиль не найден, хотя пользователь авторизован. Выходим из системы.
+                    console.error("Профиль не найден, принудительный выход.");
                     this.signOut();
+                    return; // Прерываем выполнение
                 }
             } else {
+                // Пользователь не авторизован.
                 this.user = null;
                 this.updateUserUI(null);
             }
+            // Сообщаем всем остальным скриптам о текущем статусе пользователя
             document.dispatchEvent(new CustomEvent('userStateReady', { detail: this.user }));
         });
     }
 
-    // 5. ВХОД ЧЕРЕЗ DISCORD
+    // 4. СОЗДАНИЕ ПРОФИЛЯ (ЕСЛИ НУЖНО)
+    async createUserProfileIfNotExists(firebaseUser, discordProfile) {
+        const userProfileRef = this.db.collection('profiles').doc(firebaseUser.uid);
+        const userProfileDoc = await userProfileRef.get();
+
+        if (!userProfileDoc.exists) {
+            const newProfileData = {
+                username: discordProfile.username || firebaseUser.displayName,
+                email: discordProfile.email || firebaseUser.email,
+                avatar_url: discordProfile.avatar ? `https://cdn.discordapp.com/avatars/${discordProfile.id}/${discordProfile.avatar}.png` : firebaseUser.photoURL,
+                role: 'Игрок'
+            };
+            await userProfileRef.set(newProfileData);
+            console.log('Создан новый профиль:', newProfileData.username);
+        }
+    }
+
+    // 5. ПОЛУЧЕНИЕ ПРОФИЛЯ ИЗ БД
+    async getUserProfile(uid) {
+        const userProfileRef = this.db.collection('profiles').doc(uid);
+        const userProfileDoc = await userProfileRef.get();
+        return userProfileDoc.exists ? { uid, ...userProfileDoc.data() } : null;
+    }
+
+    // 6. ВХОД ЧЕРЕЗ DISCORD
     async signInWithDiscord() {
         const provider = new firebase.auth.OAuthProvider('oidc.discord.com');
         provider.addScope('identify');
@@ -91,22 +108,21 @@ class AuthManager {
         this.auth.signInWithRedirect(provider);
     }
 
-    // 6. ВЫХОД ИЗ АККАУНТА
+    // 7. ВЫХОД ИЗ АККАУНТА
     async signOut() {
         await this.auth.signOut();
+        // Просто перезагружаем страницу, onAuthStateChanged сделает остальное.
         document.body.classList.add('fade-out');
-        setTimeout(() => {
-            window.location.href = '/index.html';
-        }, 250);
+        setTimeout(() => window.location.href = '/index.html', 250);
     }
 
-    // 7. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА
+    // 8. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА
     updateUserUI(user, isLoading = false) {
         const userSection = document.getElementById('userSection');
         if (!userSection) return;
 
         if (isLoading) {
-            userSection.innerHTML = '<div class="login-btn loading-auth">Проверка...</div>';
+            userSection.innerHTML = `<div class="login-btn loading-auth">Проверка...</div>`;
             return;
         }
 
@@ -114,21 +130,30 @@ class AuthManager {
             const name = user.username || 'Пользователь';
             const avatarUrl = user.avatar_url;
             const avatarImg = (avatarUrl && avatarUrl !== 'null') 
-                ? `<img src="${avatarUrl}" alt="Аватар" style='width:100%;height:100%;border-radius:50%;'>` 
+                ? `<img src="${avatarUrl}" alt="Аватар" style="width:100%;height:100%;border-radius:50%;">` 
                 : name.charAt(0).toUpperCase();
 
             userSection.innerHTML = `
-                <div class="user-info"><div class="user-dropdown"><div class="user-name"><div class="user-avatar" title="${name}">${avatarImg}</div><span>${name}</span></div><div class="dropdown-menu"><a href="account.html" class="dropdown-item"><span>Личный кабинет</span></a><button class="logout-btn dropdown-item"><span>Выйти</span></button></div></div></div>`;
+                <div class.user-info">
+                    <div class="user-dropdown">
+                        <div class="user-name">
+                            <div class="user-avatar" title="${name}">${avatarImg}</div>
+                            <span>${name}</span>
+                        </div>
+                        <div class="dropdown-menu">
+                            <a href="account.html" class="dropdown-item"><span>Личный кабинет</span></a>
+                            <button class="logout-btn dropdown-item"><span>Выйти</span></button>
+                        </div>
+                    </div>
+                </div>`;
         } else {
             userSection.innerHTML = '<button class="login-btn">Войти</button>';
-            const loginBtn = userSection.querySelector('.login-btn');
-            if (loginBtn) {
-                loginBtn.addEventListener('click', () => this.signInWithDiscord());
-            }
+            userSection.querySelector('.login-btn').addEventListener('click', () => this.signInWithDiscord());
         }
     }
 }
 
+// Запускаем наш менеджер авторизации при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
-    new AuthManager();
+    window.authManager = new AuthManager();
 });
