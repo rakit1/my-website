@@ -1,13 +1,12 @@
 class MainPage {
     constructor() {
-        // Просто ждем, пока authManager будет готов
         document.addEventListener('userStateReady', (event) => {
             this.user = event.detail;
-            this.init();
+            this.initPage();
         });
     }
     
-    init() {
+    initPage() {
         this.setupEventListeners();
         this.updateOnlineCount();
         this.showBetaWarningOnce();
@@ -16,31 +15,29 @@ class MainPage {
 
     showBetaWarningOnce() {
         const modal = document.getElementById('betaWarningModal');
-        if (modal && !sessionStorage.getItem('betaWarningShown')) {
-            this.showModal(modal);
-        }
+        if (modal && !sessionStorage.getItem('betaWarningShown')) this.showModal(modal);
     }
 
     async updateOnlineCount() {
         const serverIp = "cbworlds.aboba.host";
-        const heroOnlineElement = document.getElementById('online-count');
-        const cardOnlineElement = document.getElementById('server-card-online');
-        const onlineDotElement = document.querySelector('.online-dot');
+        const heroOnline = document.getElementById('online-count');
+        const cardOnline = document.getElementById('server-card-online');
+        const onlineDot = document.querySelector('.online-dot');
         try {
             const response = await fetch(`https://api.mcsrvstat.us/2/${serverIp}`);
             const data = await response.json();
-            if (data.online && data.players && data.players.online !== undefined) {
+            if (data.online) {
                 const onlineText = data.players.online;
-                if (heroOnlineElement) heroOnlineElement.textContent = onlineText;
-                if (cardOnlineElement) cardOnlineElement.textContent = `${onlineText} онлайн`;
-                if (onlineDotElement) onlineDotElement.style.background = 'var(--primary)';
+                if (heroOnline) heroOnline.textContent = onlineText;
+                if (cardOnline) cardOnline.textContent = `${onlineText} онлайн`;
+                if (onlineDot) onlineDot.style.background = 'var(--primary)';
             } else {
-                if (heroOnlineElement) heroOnlineElement.textContent = 'Оффлайн';
-                if (cardOnlineElement) cardOnlineElement.textContent = `Оффлайн`;
-                if (onlineDotElement) onlineDotElement.style.background = '#eb445a';
+                if (heroOnline) heroOnline.textContent = 'Оффлайн';
+                if (cardOnline) cardOnline.textContent = `Оффлайн`;
+                if (onlineDot) onlineDot.style.background = '#eb445a';
             }
         } catch (error) {
-            console.error("Ошибка при получении онлайна:", error);
+            console.error("Ошибка получения онлайна:", error);
         }
     }
 
@@ -70,7 +67,6 @@ class MainPage {
         if (this.user) {
             this.showModal('#ipModal');
         } else {
-            // Если пользователя нет, просим authManager начать вход
             window.authManager.signInWithDiscord();
         }
     }
@@ -92,16 +88,15 @@ class MainPage {
             button.classList.add('copied');
             setTimeout(() => button.classList.remove('copied'), 1500);
         } catch (err) {
-            console.error('Не удалось скопировать IP:', err);
             alert('Не удалось скопировать IP. Скопируйте вручную: ' + ip);
         }
     }
 }
 
-// Запускаем логику главной страницы
-new MainPage();
+document.addEventListener('DOMContentLoaded', () => {
+    new MainPage();
+});
 
-// Глобальная функция для скролла, оставляем как есть
-window.scrollToServers = function() {
+window.scrollToServers = () => {
     document.getElementById('servers-section')?.scrollIntoView({ behavior: 'smooth' });
 };
