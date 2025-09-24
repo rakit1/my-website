@@ -87,14 +87,16 @@ class SupportPage {
             
             const newTicketId = ticketData.id;
 
+            // --- ИЗМЕНЕНИЕ ЗДЕСЬ ---
+            // Мы удалили строку 'ticket_owner_id', которой больше нет в базе данных
             const { error: messageError } = await this.authManager.supabase
                 .from('messages')
                 .insert([{ 
                     ticket_id: newTicketId, 
                     user_id: this.user.id, 
-                    content: description,
-                    ticket_owner_id: this.user.id 
+                    content: description
                 }]);
+            // --- КОНЕЦ ИЗМЕНЕНИЯ ---
                 
             if (messageError) throw messageError;
 
