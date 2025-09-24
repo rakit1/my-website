@@ -64,7 +64,7 @@ class TicketPage {
             this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
             this.updateTicketUI();
             
-            // --- FINAL FIX HERE: This now uses the simple, correct syntax ---
+            // Этот код теперь будет работать, так как связь в БД есть
             const { data: messages, error: messagesError } = await this.supabase
                 .from('messages')
                 .select(`
@@ -77,7 +77,6 @@ class TicketPage {
                 `)
                 .eq('ticket_id', this.ticketId)
                 .order('created_at');
-            // --- END OF FIX ---
 
             if (messagesError) throw messagesError;
             
