@@ -38,9 +38,6 @@ class MainPage {
             }
         } catch (error) {
             console.error("Ошибка при получении онлайна:", error);
-            if (heroOnlineElement) heroOnlineElement.textContent = 'Ошибка';
-            if (cardOnlineElement) cardOnlineElement.textContent = 'Ошибка';
-            if (onlineDotElement) onlineDotElement.style.background = '#eb445a';
         }
     }
 
@@ -50,16 +47,12 @@ class MainPage {
             if (e.target.closest('#discordSignIn')) this.authManager.signInWithDiscord();
             if (e.target.closest('.server-join-btn')) this.handleServerJoin();
             if (e.target.closest('.ip-btn')) this.copyIP(e.target.closest('.ip-btn'));
-            if (e.target.closest('.close-auth, .close-ip-modal')) {
+            if (e.target.closest('.close-auth, .close-ip-modal, .close-beta-warning-btn')) {
                 const modal = e.target.closest('.auth-container, .ip-modal');
                 if (modal) {
                     this.hideModal(modal);
                     if (modal.id === 'betaWarningModal') sessionStorage.setItem('betaWarningShown', 'true');
                 }
-            }
-            if (e.target.closest('.close-beta-warning-btn')) {
-                this.hideModal('#betaWarningModal');
-                sessionStorage.setItem('betaWarningShown', 'true');
             }
             const activeModal = document.querySelector('.auth-container.active, .ip-modal.active');
             if (activeModal && e.target === activeModal) {
@@ -70,16 +63,13 @@ class MainPage {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 const activeModal = document.querySelector('.auth-container.active, .ip-modal.active');
-                if (activeModal) {
-                    this.hideModal(activeModal);
-                    if (activeModal.id === 'betaWarningModal') sessionStorage.setItem('betaWarningShown', 'true');
-                }
+                if (activeModal) this.hideModal(activeModal);
             }
         });
     }
     
     handleServerJoin() {
-        if (this.authManager.auth.currentUser) {
+        if (this.authManager.user) {
             this.showModal('#ipModal');
         } else {
             this.showModal('#authPage');
@@ -87,13 +77,11 @@ class MainPage {
     }
     
     showModal(selector) {
-        const modal = typeof selector === 'string' ? document.querySelector(selector) : selector;
-        if (modal) modal.classList.add('active');
+        document.querySelector(selector)?.classList.add('active');
     }
 
-    hideModal(modal) {
-        if (typeof modal === 'string') modal = document.querySelector(modal);
-        if (modal) modal.classList.remove('active');
+    hideModal(selector) {
+        document.querySelector(selector)?.classList.remove('active');
     }
 
     async copyIP(button) {
