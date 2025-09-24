@@ -38,14 +38,25 @@ class AccountPage {
 
         let userRole = 'Игрок';
         try {
+            // --- ИЗМЕНЕНИЕ НАЧАТО ---
+            // Пытаемся загрузить профиль
             const { data, error } = await this.supabase
                 .from('profiles')
                 .select('role')
                 .eq('id', this.user.id)
                 .single();
 
-            if (error && error.code !== 'PGRST116') throw error;
-            if (data) userRole = data.role;
+            // Если профиль не найден (ошибка 'PGRST116'), используем роль по умолчанию.
+            if (error && error.code === 'PGRST116') {
+                 console.warn('Профиль не найден в account.js, используется роль "Игрок".');
+            } else if (error) {
+                // Для всех других ошибок - выводим их в консоль.
+                throw error;
+            } else if (data) {
+                // Если данные успешно получены, используем их.
+                userRole = data.role;
+            }
+            // --- ИЗМЕНЕНИЕ ОКОНЧЕНО ---
 
             if (userRole === 'Администратор') {
                 this.displayAdminButton();
