@@ -45,8 +45,7 @@ class MainPage {
     setupEventListeners() {
         document.body.addEventListener('click', (e) => {
             // Используем текстовые селекторы для вызова
-            if (e.target.closest('.login-btn')) this.showModal('#authPage');
-            if (e.target.closest('#discordSignIn')) this.authManager.signInWithDiscord();
+            // Строка для .login-btn удалена, так как логика перенесена в auth.js
             if (e.target.closest('.server-join-btn')) this.handleServerJoin();
             if (e.target.closest('.ip-btn')) this.copyIP(e.target.closest('.ip-btn'));
             
@@ -76,7 +75,7 @@ class MainPage {
         if (this.authManager.user) {
             this.showModal('#ipModal');
         } else {
-            this.showModal('#authPage');
+            this.authManager.signInWithDiscord(); // Предлагаем войти, если пользователь не авторизован
         }
     }
     
