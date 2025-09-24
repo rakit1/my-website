@@ -41,64 +41,67 @@ class TicketPage {
 
     async loadInitialData() {
         try {
-            // Проверяем доступ к тикету через RPC функцию
-            const { data: messages, error: messagesError } = await this.supabase
-                .rpc('get_accessible_messages')
-                .eq('ticket_id', this.ticketId)
-                .order('created_at');
-
-            if (messagesError) {
-                // Если функция вернула ошибку, значит нет доступа
-                throw new Error("Не удалось найти тикет или у вас нет к нему доступа.");
+            // Сначала проверяем доступ к тикету и получаем информацию о тикете
+            const { data: ticketData, error: ticketError } = await this.supabase
+                .from('tickets')
+                .select('user_id, is_closed')
+                .eq('id', this.ticketId)
+                .single();
+                
+            if (ticketError) {
+                throw new Error("Тикет не найден или у вас нет к нему доступа.");
             }
 
-            if (messages.length === 0) {
-                // Дополнительная проверка - возможно тикет существует, но нет сообщений
-                const { data: ticketCheck, error: ticketError } = await this.supabase
-                    .from('tickets')
-                    .select('user_id, is_closed')
-                    .eq('id', this.ticketId)
-                    .single();
-
-                if (ticketError) throw new Error("Тикет не найден.");
+            // Проверяем роль пользователя
+            const { data: userProfile, error: profileError } = await this.supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', this.user.id)
+                .single();
                 
-                // Проверяем права доступа к пустому тикету
-                const { data: userProfile } = await this.supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', this.user.id)
-                    .single();
+            if (profileError) {
+                console.error('Profile error:', profileError);
+                throw new Error("Не удалось загрузить профиль пользователя.");
+            }
 
-                this.isCurrentUserAdmin = userProfile?.role === 'Администратор';
-                
-                if (!this.isCurrentUserAdmin && ticketCheck.user_id !== this.user.id) {
-                    throw new Error("У вас нет доступа к этому тикету.");
-                }
+            this.isCurrentUserAdmin = userProfile?.role === 'Администратор';
 
-                this.isTicketClosed = ticketCheck.is_closed;
-            } else {
-                // Если есть сообщения, получаем информацию из первого сообщения
-                this.isTicketClosed = messages[0].tickets?.is_closed || false;
-                
-                // Собираем ID всех авторов сообщений
-                const authorIds = [...new Set(messages.map(msg => msg.user_id))];
-                if (!authorIds.includes(this.user.id)) authorIds.push(this.user.id);
+            // Проверяем права доступа
+            if (!this.isCurrentUserAdmin && ticketData.user_id !== this.user.id) {
+                throw new Error("У вас нет доступа к этому тикету.");
+            }
 
-                // Загружаем профили участников
-                if (authorIds.length > 0) {
-                    const { data: profiles, error: profilesError } = await this.supabase
-                        .from('profiles')
-                        .select('id, username, avatar_url, role')
-                        .in('id', authorIds);
-                    
-                    if (!profilesError) {
-                        profiles.forEach(p => this.participants.set(p.id, p));
-                    }
-                }
+            this.isTicketClosed = ticketData.is_closed;
 
-                // Проверяем роль текущего пользователя
-                const currentUserProfile = this.participants.get(this.user.id);
-                this.isCurrentUserAdmin = currentUserProfile?.role === 'Администратор';
+            // Используем RPC функцию для получения сообщений
+            const { data: messages, error: messagesError } = await this.supabase
+                .rpc('get_accessible_ticket_messages', { 
+                    p_ticket_id: this.ticketId 
+                });
+
+            if (messagesError) {
+                console.error('RPC Error:', messagesError);
+                throw new Error("Не удалось загрузить сообщения.");
+            }
+
+            // Сохраняем информацию об авторах
+            if (messages && messages.length > 0) {
+                messages.forEach(msg => {
+                    this.participants.set(msg.user_id, {
+                        username: msg.author_username,
+                        avatar_url: msg.author_avatar_url,
+                        role: msg.author_role
+                    });
+                });
+            }
+
+            // Добавляем текущего пользователя в участники если его нет
+            if (!this.participants.has(this.user.id)) {
+                this.participants.set(this.user.id, {
+                    username: userProfile?.username || 'Пользователь',
+                    avatar_url: userProfile?.avatar_url || null,
+                    role: userProfile?.role || 'Игрок'
+                });
             }
 
             this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
@@ -106,7 +109,9 @@ class TicketPage {
 
             // Отображаем сообщения
             this.chatBox.innerHTML = '';
-            messages.forEach(msg => this.addMessageToBox(msg));
+            if (messages && messages.length > 0) {
+                messages.forEach(msg => this.addMessageToBox(msg));
+            }
             this.scrollToBottom();
 
         } catch (error) {
@@ -120,30 +125,35 @@ class TicketPage {
         
         this.channel = this.supabase.channel(channelName);
 
-        // Слушаем новые сообщения
+        // Слушаем новые сообщения через broadcast
         this.channel.on('broadcast', { event: 'new_message' }, async ({ payload }) => {
-            const newMessage = payload.new;
-            
-            // Проверяем доступ к новому сообщению через RPC функцию
-            const { data: accessibleMessages } = await this.supabase
-                .rpc('get_accessible_messages')
-                .eq('id', newMessage.id)
-                .eq('ticket_id', this.ticketId);
-
-            if (accessibleMessages && accessibleMessages.length > 0) {
-                // Если есть доступ, отображаем сообщение
-                if (!this.participants.has(newMessage.user_id)) {
-                    const { data: profile } = await this.supabase
-                        .from('profiles')
-                        .select('username, avatar_url, role')
-                        .eq('id', newMessage.user_id)
-                        .single();
-                    
-                    if (profile) this.participants.set(newMessage.user_id, profile);
-                }
+            try {
+                const newMessage = payload.new;
                 
-                this.addMessageToBox(newMessage);
-                this.scrollToBottom();
+                // Проверяем доступ к сообщению через RPC функцию
+                const { data: accessibleMessages } = await this.supabase
+                    .rpc('get_accessible_ticket_messages', { 
+                        p_ticket_id: this.ticketId 
+                    })
+                    .eq('id', newMessage.id);
+
+                if (accessibleMessages && accessibleMessages.length > 0) {
+                    // Если есть доступ, отображаем сообщение
+                    const messageData = accessibleMessages[0];
+                    
+                    if (!this.participants.has(messageData.user_id)) {
+                        this.participants.set(messageData.user_id, {
+                            username: messageData.author_username,
+                            avatar_url: messageData.author_avatar_url,
+                            role: messageData.author_role
+                        });
+                    }
+                    
+                    this.addMessageToBox(messageData);
+                    this.scrollToBottom();
+                }
+            } catch (error) {
+                console.error('Error processing new message:', error);
             }
         }).subscribe();
 
@@ -195,6 +205,7 @@ class TicketPage {
 
             this.messageForm.reset();
         } catch (error) {
+            console.error('Send message error:', error);
             alert('Ошибка отправки сообщения: ' + error.message);
         } finally {
             this.sendMessageButton.disabled = false;
@@ -221,7 +232,7 @@ class TicketPage {
         
         const date = new Date(message.created_at).toLocaleString('ru-RU');
         const avatarHTML = authorProfile.avatar_url 
-            ? `<img src="${authorProfile.avatar_url}" alt="Аватар">` 
+            ? `<img src="${authorProfile.avatar_url}" alt="Аватар" class="message-avatar-img">` 
             : `<div class="message-avatar-placeholder">${(authorProfile.username || 'U').charAt(0).toUpperCase()}</div>`;
         
         const authorClass = isAdmin ? 'message-author admin-role' : 'message-author';
@@ -240,6 +251,7 @@ class TicketPage {
         messageContent.textContent = message.content;
         
         const messageTimestamp = document.createElement('span');
+        messageTimestamp.className = 'message-time';
         messageTimestamp.textContent = date;
         
         messageBody.appendChild(messageContent);
@@ -288,6 +300,7 @@ class TicketPage {
             
             this.confirmationModal.classList.remove('active');
         } catch (error) {
+            console.error('Close ticket error:', error);
             alert('Ошибка при закрытии тикета: ' + error.message);
         } finally {
             this.confirmCloseBtn.disabled = false;
@@ -295,12 +308,14 @@ class TicketPage {
     }
 
     updateTicketUI() {
+        // Показываем кнопку закрытия только администраторам
         if (this.isCurrentUserAdmin) {
             this.closeTicketButton.style.display = 'inline-flex';
         } else {
             this.closeTicketButton.style.display = 'none';
         }
         
+        // Обновляем UI если тикет закрыт
         if (this.isTicketClosed) {
             this.messageTextarea.disabled = true;
             this.messageTextarea.placeholder = 'Тикет закрыт. Отправка сообщений недоступна.';
@@ -312,21 +327,26 @@ class TicketPage {
     }
 
     scrollToBottom() {
-        this.chatBox.scrollTop = this.chatBox.scrollHeight;
+        setTimeout(() => {
+            this.chatBox.scrollTop = this.chatBox.scrollHeight;
+        }, 100);
     }
 
     showError(message) {
-        this.chatBox.innerHTML = `<p class="error-message">${message}</p>`;
+        this.chatBox.innerHTML = `<div class="error-message">${message}</div>`;
         this.messageForm.style.display = 'none';
         this.closeTicketButton.style.display = 'none';
     }
 }
 
+// Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
     const authManager = new AuthManager();
     const ticketPage = new TicketPage(authManager);
     
     window.addEventListener('beforeunload', () => {
-        ticketPage.destroy();
+        if (ticketPage.destroy) {
+            ticketPage.destroy();
+        }
     });
 });
