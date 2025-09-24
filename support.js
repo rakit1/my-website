@@ -1,7 +1,6 @@
 class SupportPage {
-    constructor(authManager) {
-        this.authManager = authManager;
-        this.db = authManager.db;
+    constructor() {
+        this.db = firebase.firestore();
         this.user = null;
         this.form = document.getElementById('ticket-form');
         this.feedbackDiv = document.getElementById('form-feedback');
@@ -9,10 +8,8 @@ class SupportPage {
         this.ticketExistsWarning = document.getElementById('ticket-exists-warning');
         this.loginPromptModal = document.getElementById('login-prompt');
         this.promptLoginBtn = document.getElementById('prompt-login-btn');
-        this.init();
-    }
 
-    init() {
+        // Ждем события 'userStateReady' от auth.js
         document.addEventListener('userStateReady', (event) => {
             this.user = event.detail;
             if (this.user) {
@@ -21,7 +18,10 @@ class SupportPage {
                 this.setupGuestView();
             }
         });
-        if (this.form) this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+
+        if (this.form) {
+            this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+        }
     }
 
     async setupAuthenticatedView() {
@@ -43,49 +43,46 @@ class SupportPage {
     setupGuestView() {
         this.supportContent.style.display = 'none';
         this.ticketExistsWarning.style.display = 'none';
-        this.loginPromptModal.classList.add('active'); 
-        this.promptLoginBtn.addEventListener('click', () => this.authManager.signInWithDiscord());
+        this.loginPromptModal.classList.add('active');
+        if (this.promptLoginBtn) {
+            this.promptLoginBtn.addEventListener('click', () => window.authManager.signInWithDiscord());
+        }
     }
 
-    // ИЗМЕНЕНО: Логика создания тикета теперь использует транзакцию и счетчик
     async handleSubmit(event) {
         event.preventDefault();
         const description = this.form.elements.description.value.trim();
-        if (!description) return this.showFeedback('Описание не может быть пустым.', 'error');
+        if (!description) {
+            return this.showFeedback('Описание не может быть пустым.', 'error');
+        }
         
         const submitButton = this.form.querySelector('button[type="submit"]');
         submitButton.disabled = true;
         submitButton.textContent = 'Создание...';
 
         const counterRef = this.db.collection('counters').doc('tickets');
-        const newTicketRef = this.db.collection('tickets').doc(); // Firestore все еще генерирует уникальный ID
+        const newTicketRef = this.db.collection('tickets').doc();
 
         try {
-            // Запускаем транзакцию, чтобы безопасно получить новый номер
-            const newTicketNumber = await this.db.runTransaction(async (transaction) => {
+            await this.db.runTransaction(async (transaction) => {
                 const counterDoc = await transaction.get(counterRef);
                 if (!counterDoc.exists) {
-                    throw "Документ-счетчик не найден!";
+                    throw new Error("Документ-счетчик не найден!");
                 }
                 const newNumber = counterDoc.data().current_number + 1;
                 
-                // 1. Обновляем счетчик
                 transaction.update(counterRef, { current_number: newNumber });
                 
-                // 2. Создаем новый тикет
                 const ticketData = {
                     user_id: this.user.uid,
                     description,
                     is_closed: false,
                     created_at: firebase.firestore.FieldValue.serverTimestamp(),
-                    ticket_number: newNumber // Добавляем наш номер
+                    ticket_number: newNumber
                 };
                 transaction.set(newTicketRef, ticketData);
-                
-                return newNumber;
             });
 
-            // 3. Создаем первое сообщение для этого тикета
             await this.db.collection('messages').add({
                 ticket_id: newTicketRef.id,
                 user_id: this.user.uid,
@@ -111,6 +108,5 @@ class SupportPage {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const authManager = new AuthManager();
-    new SupportPage(authManager);
+    new SupportPage();
 });
