@@ -1,12 +1,13 @@
 class TicketPage {
     constructor(authManager) {
         this.authManager = authManager;
-        this.supabase = authManager.supabase;
+        this.db = authManager.db;
         this.user = null;
         this.ticketId = new URLSearchParams(window.location.search).get('id');
         this.isCurrentUserAdmin = false;
         this.isTicketClosed = false;
-        this.channel = null;
+        this.unsubscribeMessages = null;
+        this.unsubscribeTicket = null;
 
         this.participants = new Map();
         this.chatBox = document.getElementById('chat-box');
@@ -22,122 +23,104 @@ class TicketPage {
         this.init();
     }
 
-    async init() {
+    init() {
         if (!this.ticketId) {
             window.location.href = 'account.html';
             return;
         }
-        const { data: { user } } = await this.supabase.auth.getUser();
-        if (user) {
-            this.user = user;
-            await this.loadInitialData(); // Сначала загружаем данные
-            this.setupEventListeners();
-            this.subscribeToUpdates(); // Потом подписываемся на обновления
-        } else {
-            window.location.href = 'index.html';
-        }
+        
+        this.authManager.auth.onAuthStateChanged(user => {
+            if (user && this.authManager.user) {
+                this.user = this.authManager.user;
+                this.isCurrentUserAdmin = this.user.role === 'Администратор';
+                this.loadInitialData();
+                this.setupEventListeners();
+            } else if (!user) {
+                window.location.href = 'index.html';
+            }
+        });
+
+        window.addEventListener('beforeunload', () => this.destroy());
     }
 
-    // Загрузка данных остается такой же, как в прошлый раз (через два запроса)
     async loadInitialData() {
         try {
-            const { data: ticketData, error: ticketError } = await this.supabase
-                .from('tickets').select('user_id, is_closed').eq('id', this.ticketId).single();
-            if (ticketError) throw new Error("Не удалось найти тикет или у вас нет к нему доступа.");
+            const ticketRef = firebase.firestore().collection('tickets').doc(this.ticketId);
+            const ticketDoc = await ticketRef.get();
 
-            const { data: messages, error: messagesError } = await this.supabase
-                .from('messages').select('*').eq('ticket_id', this.ticketId).order('created_at');
-            if (messagesError) throw messagesError;
+            if (!ticketDoc.exists) throw new Error("Тикет не найден.");
 
-            const authorIds = [...new Set(messages.map(msg => msg.user_id))];
-            if (!authorIds.includes(this.user.id)) authorIds.push(this.user.id);
-
-            if (authorIds.length > 0) {
-                const { data: profiles, error: profilesError } = await this.supabase
-                    .from('profiles').select('id, username, avatar_url, role').in('id', authorIds);
-                if (profilesError) throw profilesError;
-                profiles.forEach(p => this.participants.set(p.id, p));
-            }
-
-            const currentUserProfile = this.participants.get(this.user.id);
-            this.isCurrentUserAdmin = currentUserProfile?.role === 'Администратор';
-
-            if (!this.isCurrentUserAdmin && ticketData.user_id !== this.user.id) {
+            const ticketData = ticketDoc.data();
+            
+            if (!this.isCurrentUserAdmin && ticketData.user_id !== this.user.uid) {
                 throw new Error("У вас нет доступа к этому тикету.");
             }
-
-            this.isTicketClosed = ticketData.is_closed;
+            
             this.ticketTitle.textContent = `Тикет #${this.ticketId}`;
-            this.updateTicketUI();
+            
+            const currentUserProfile = await firebase.firestore().collection('profiles').doc(this.user.uid).get();
+            if (currentUserProfile.exists) {
+                this.participants.set(this.user.uid, currentUserProfile.data());
+            }
 
-            this.chatBox.innerHTML = '';
-            messages.forEach(msg => this.addMessageToBox(msg));
-            this.scrollToBottom();
+            this.subscribeToUpdates();
 
         } catch (error) {
             this.showError(error.message);
         }
     }
     
-    // --- ГЛАВНОЕ ИЗМЕНЕНИЕ ЗДЕСЬ ---
     subscribeToUpdates() {
-        // Мы больше не слушаем `postgres_changes`. Вместо этого мы создаем свой собственный канал.
-        // Имя канала уникально для каждого тикета, например 'ticket_chat:4'
-        const channelName = `ticket_chat:${this.ticketId}`;
-        
-        this.channel = this.supabase.channel(channelName);
-
-        // Теперь мы слушаем событие 'new_message', которое будет принудительно отправлено нашим триггером из базы данных.
-        this.channel.on('broadcast', { event: 'new_message' }, async ({ payload }) => {
-            const newMessage = payload.new;
-            
-            // Если мы не знаем автора, догружаем его профиль
-            if (!this.participants.has(newMessage.user_id)) {
-                const { data: profile } = await this.supabase.from('profiles').select('username, avatar_url, role').eq('id', newMessage.user_id).single();
-                if (profile) this.participants.set(newMessage.user_id, profile);
+        const ticketRef = firebase.firestore().collection('tickets').doc(this.ticketId);
+        this.unsubscribeTicket = ticketRef.onSnapshot(doc => {
+            const ticketData = doc.data();
+            if (ticketData && ticketData.is_closed !== this.isTicketClosed) {
+                this.isTicketClosed = ticketData.is_closed;
+                this.updateTicketUI();
             }
-            
-            this.addMessageToBox(newMessage);
-            this.scrollToBottom();
-        }).subscribe();
+        });
 
-        // Также оставляем подписку на обновление самого тикета (на случай закрытия)
-        this.supabase.channel(`ticket-status-${this.ticketId}`)
-            .on('postgres_changes', {
-                event: 'UPDATE', schema: 'public', table: 'tickets', filter: `id=eq.${this.ticketId}`
-            }, (payload) => {
-                if (payload.new.is_closed) {
-                    this.isTicketClosed = true;
-                    this.updateTicketUI();
+        const messagesRef = firebase.firestore().collection('messages');
+        const query = messagesRef.where('ticket_id', '==', this.ticketId).orderBy('created_at');
+        
+        this.chatBox.innerHTML = '';
+
+        this.unsubscribeMessages = query.onSnapshot(async snapshot => {
+            const changes = snapshot.docChanges();
+            const newParticipantIds = [...new Set(changes
+                .map(change => change.doc.data().user_id)
+                .filter(id => !this.participants.has(id)))];
+            
+            if (newParticipantIds.length > 0) {
+                 const profilesSnapshot = await firebase.firestore().collection('profiles').where(firebase.firestore.FieldPath.documentId(), 'in', newParticipantIds).get();
+                 profilesSnapshot.docs.forEach(doc => this.participants.set(doc.id, doc.data()));
+            }
+
+            changes.forEach(change => {
+                if (change.type === "added") {
+                    this.addMessageToBox(change.doc.id, change.doc.data());
                 }
-            }).subscribe();
+            });
+            this.scrollToBottom();
+        }, error => {
+            console.error("Ошибка real-time подписки на сообщения:", error);
+            this.showError("Не удалось загрузить сообщения.");
+        });
     }
 
-    // Функция отправки сообщения теперь тоже должна отправлять уведомление
     async handleSubmit(event) {
         event.preventDefault();
         const content = this.messageForm.elements.message.value.trim();
         if (!content || this.isTicketClosed) return;
 
         this.sendMessageButton.disabled = true;
-
         try {
-            // Сначала вставляем сообщение в базу
-            const { data: newMessage, error } = await this.supabase
-                .from('messages')
-                .insert({ ticket_id: this.ticketId, user_id: this.user.id, content })
-                .select()
-                .single();
-
-            if (error) throw error;
-            
-            // Теперь отправляем уведомление по нашему каналу
-            await this.channel.send({
-                type: 'broadcast',
-                event: 'new_message',
-                payload: { new: newMessage },
+            await firebase.firestore().collection('messages').add({
+                ticket_id: this.ticketId,
+                user_id: this.user.uid,
+                content: content,
+                created_at: firebase.firestore.FieldValue.serverTimestamp()
             });
-
             this.messageForm.reset();
         } catch (error) {
             alert('Ошибка отправки сообщения: ' + error.message);
@@ -147,35 +130,45 @@ class TicketPage {
         }
     }
     
-    // Остальной код остается без изменений...
-    addMessageToBox(message) {
-        if (document.querySelector(`[data-message-id="${message.id}"]`)) return;
+    addMessageToBox(messageId, message) {
+        if (document.querySelector(`[data-message-id="${messageId}"]`)) return;
+        
         const authorProfile = this.participants.get(message.user_id) || { username: 'Пользователь', avatar_url: null, role: 'Игрок' };
-        const isUserMessage = message.user_id === this.user.id;
+        const isUserMessage = message.user_id === this.user.uid;
         const isAdmin = authorProfile.role === 'Администратор';
+
         const wrapper = document.createElement('div');
         wrapper.className = `message-wrapper ${isUserMessage ? 'user' : 'admin'}`;
-        wrapper.dataset.messageId = message.id;
-        const date = new Date(message.created_at).toLocaleString('ru-RU');
+        wrapper.dataset.messageId = messageId;
+        
+        const date = message.created_at ? new Date(message.created_at.toDate()).toLocaleString('ru-RU') : 'отправка...';
+        
         const avatarHTML = authorProfile.avatar_url 
             ? `<img src="${authorProfile.avatar_url}" alt="Аватар">` 
             : `<div class="message-avatar-placeholder">${(authorProfile.username || 'U').charAt(0).toUpperCase()}</div>`;
+        
         const authorClass = isAdmin ? 'message-author admin-role' : 'message-author';
+
         const messageHeader = document.createElement('div');
         messageHeader.className = 'message-header';
         messageHeader.innerHTML = `<div class="message-avatar">${avatarHTML}</div><div class="${authorClass}">${authorProfile.username || 'Пользователь'}</div>`;
+        
         const messageBody = document.createElement('div');
         messageBody.className = 'message';
         const messageContent = document.createElement('p');
         messageContent.textContent = message.content;
         const messageTimestamp = document.createElement('span');
         messageTimestamp.textContent = date;
+        
         messageBody.appendChild(messageContent);
         messageBody.appendChild(messageTimestamp);
+        
         wrapper.appendChild(messageHeader);
         wrapper.appendChild(messageBody);
+        
         this.chatBox.appendChild(wrapper);
     }
+    
     setupEventListeners() {
         this.messageForm.addEventListener('submit', (e) => this.handleSubmit(e));
         this.closeTicketButton.addEventListener('click', () => {
@@ -186,16 +179,17 @@ class TicketPage {
         });
         this.confirmCloseBtn.addEventListener('click', () => this.executeTicketClosure());
     }
+
     destroy() {
-        if (this.channel) this.supabase.removeChannel(this.channel);
-        const statusChannel = this.supabase.channel(`ticket-status-${this.ticketId}`);
-        if (statusChannel) this.supabase.removeChannel(statusChannel);
+        if (this.unsubscribeMessages) this.unsubscribeMessages();
+        if (this.unsubscribeTicket) this.unsubscribeTicket();
     }
+
     async executeTicketClosure() {
         this.confirmCloseBtn.disabled = true;
         try {
-            const { error } = await this.supabase.from('tickets').update({ is_closed: true }).eq('id', this.ticketId);
-            if (error) throw error;
+            const ticketRef = firebase.firestore().collection('tickets').doc(this.ticketId);
+            await ticketRef.update({ is_closed: true });
             this.confirmationModal.classList.remove('active');
         } catch (error) {
             alert('Ошибка при закрытии тикета: ' + error.message);
@@ -203,6 +197,7 @@ class TicketPage {
             this.confirmCloseBtn.disabled = false;
         }
     }
+    
     updateTicketUI() {
         if (this.isCurrentUserAdmin) {
             this.closeTicketButton.style.display = 'inline-flex';
@@ -218,9 +213,11 @@ class TicketPage {
             this.destroy();
         }
     }
+    
     scrollToBottom() {
         this.chatBox.scrollTop = this.chatBox.scrollHeight;
     }
+    
     showError(message) {
         this.chatBox.innerHTML = `<p class="error-message">${message}</p>`;
         this.messageForm.style.display = 'none';
@@ -230,6 +227,6 @@ class TicketPage {
 
 document.addEventListener('DOMContentLoaded', () => {
     const authManager = new AuthManager();
-    const ticketPage = new TicketPage(authManager);
-    window.addEventListener('beforeunload', () => ticketPage.destroy());
+    new TicketPage(authManager);
 });
+
